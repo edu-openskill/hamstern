@@ -20,11 +20,29 @@ description: 과거 결정사항의 타당성 재검토 및 폐기 검증
 
 ## 사용 방법
 
+### 인터랙티브 audit (기존)
+
 ```bash
 /hams:audit-decisions
 ```
 
-옵션 없음 — 현재 프로젝트의 모든 결정사항 검토
+현재 프로젝트의 모든 결정사항을 Opus 분석으로 검토. 옵션 없음.
+
+### 직접 제거 (Sub-D dashboard 가 발행하는 형식)
+
+```bash
+/hams:audit-decisions remove "<decision text>"
+```
+
+`.hamstern/decisions.md` 에서 본문이 `<text>` 와 정확히 일치하는 첫 `- ` 줄을 삭제 + `decisions-log.md` 에 제거 이벤트 append. `<text>` 는 leading `- ` 와 trailing `<!-- session: ... -->` 마커를 제외한 본문. `"` 가 본문에 있으면 백슬래시 escape (`\"`).
+
+내부 구현: `skills/audit-decisions/remove.py`. Claude 가 다음을 실행:
+
+```
+python3 skills/audit-decisions/remove.py "<text>" --project .
+```
+
+매칭 0건이면 stderr 메시지 + non-zero exit. dashboard 의 `[×]` 가 발행하는 클립보드 명령에서 호출되는 게 주 사용 사례.
 
 ## 출력 형식
 
