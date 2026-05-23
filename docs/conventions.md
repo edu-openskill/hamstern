@@ -118,6 +118,26 @@ _마지막 업데이트: {ISO timestamp}_
 - 매 record 호출마다 `## {timestamp} · session {id}` 블록 1개 append
 - 같은 session 재호출 시 새 블록을 append (decisions.md 와 달리 갱신 X — log 는 추적용)
 
+### 핀 추가·제거 블럭 (dashboard/audit-decisions)
+
+`/hams:audit-decisions remove "<text>"` 와 dashboard 의 핀 추가 흐름은 별도 블럭 포맷을 사용한다:
+
+```
+## YYYY-MM-DDTHH:MM:SSZ | 핀 추가
+- **결정:** <text>
+- **카테고리:** <category>
+- **배경:** <...>
+- **출처:** ...
+```
+
+```
+## YYYY-MM-DDTHH:MM:SSZ | 핀 제거
+- **결정:** <text>
+- **제거 이유:** ...
+```
+
+`/hams:record` 가 쓰는 세션 블럭 (`## YYYY-MM-DD HH:MM · session <id>`) 과는 다른 prefix (`|` separator + 한국어 이벤트명) 로 구분된다. dashboard 의 log timeline viewer (`docs/app.js`) 는 이 두 종류만 인식한다.
+
 ## 7. 진입점 단일화 (Sub-C 이후)
 
 | 진입점 | 역할 |
