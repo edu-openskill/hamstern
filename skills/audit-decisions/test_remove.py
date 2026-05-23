@@ -29,3 +29,52 @@ def test_removes_matching_line(tmp_path):
     new = (h / "decisions.md").read_text(encoding="utf-8")
     assert "- foo bar" not in new
     assert "- baz" in new
+
+
+def test_removes_line_with_session_marker(tmp_path):
+    _setup(
+        tmp_path,
+        "# d\n\n## A\n- foo bar <!-- session: session_2026-05-22.md -->\n- baz\n",
+    )
+
+    result = removemod.run(project_root=tmp_path, text="foo bar")
+
+    assert result.removed is True
+    new = (tmp_path / ".hamstern" / "decisions.md").read_text(encoding="utf-8")
+    assert "foo bar" not in new
+    assert "- baz" in new
+
+
+def test_no_match_returns_false(tmp_path):
+    _setup(tmp_path, "# d\n\n## A\n- foo\n")
+
+    result = removemod.run(project_root=tmp_path, text="does not exist")
+
+    assert result.removed is False
+    assert "no matching decision" in result.reason
+    assert (tmp_path / ".hamstern" / "decisions.md").read_text(encoding="utf-8") == \
+        "# d\n\n## A\n- foo\n"
+
+
+def test_only_first_match_removed(tmp_path):
+    _setup(tmp_path, "# d\n\n## A\n- dup\n- dup\n")
+
+    result = removemod.run(project_root=tmp_path, text="dup")
+
+    assert result.removed is True
+    new = (tmp_path / ".hamstern" / "decisions.md").read_text(encoding="utf-8")
+    assert new.count("- dup") == 1
+
+
+def test_log_appended_on_successful_remove(tmp_path):
+    _setup(
+        tmp_path,
+        "# d\n\n## A\n- foo\n",
+        log_md="# Decisions Log\n",
+    )
+
+    removemod.run(project_root=tmp_path, text="foo")
+
+    log = (tmp_path / ".hamstern" / "decisions-log.md").read_text(encoding="utf-8")
+    assert "핀 제거" in log
+    assert "**결정:** foo" in log
