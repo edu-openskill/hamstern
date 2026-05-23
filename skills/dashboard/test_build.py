@@ -70,3 +70,24 @@ def test_decisions_log_copies_and_sets_flag(tmp_path):
     manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
     assert manifest["decisions_log"] is True
     assert manifest["decisions"] is False
+
+
+def test_sessions_copied_and_listed_in_manifest(tmp_path):
+    project = _setup_project(
+        tmp_path,
+        sessions={
+            "session_2026-05-22.md": "# session A\n",
+            "session_2026-05-23.md": "# session B\n",
+        },
+    )
+    out = tmp_path / "docs" / "data"
+
+    build.run(project_root=project, out_dir=out)
+
+    assert (out / "sessions" / "session_2026-05-22.md").exists()
+    assert (out / "sessions" / "session_2026-05-23.md").exists()
+    manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
+    assert sorted(manifest["sessions"]) == [
+        "session_2026-05-22.md",
+        "session_2026-05-23.md",
+    ]

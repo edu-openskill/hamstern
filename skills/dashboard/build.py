@@ -37,6 +37,17 @@ def run(project_root: Path, out_dir: Path) -> dict:
         shutil.copy2(log_src, out_dir / "decisions-log.md")
         manifest["decisions_log"] = True
 
+    sessions_src = src / "sessions"
+    if sessions_src.is_dir():
+        sessions_out = out_dir / "sessions"
+        sessions_out.mkdir(exist_ok=True)
+        names = []
+        for f in sorted(sessions_src.glob("*.md"),
+                        key=lambda p: (-p.stat().st_mtime, p.name)):
+            shutil.copy2(f, sessions_out / f.name)
+            names.append(f.name)
+        manifest["sessions"] = names
+
     (out_dir / "manifest.json").write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
