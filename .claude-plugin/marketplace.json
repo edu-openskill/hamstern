@@ -24,7 +24,8 @@
         "./skills/diary",
         "./skills/start",
         "./skills/stop",
-        "./skills/deeptalk"
+        "./skills/deeptalk",
+        "./skills/record"
       ]
     }
   ]
