@@ -38,7 +38,7 @@ Claude 실행 절차:
 
 ## Fallback (mom.md가 비어있거나 stale 의심 시)
 
-Stop hook이 cmux/deeptalk 활성으로 bail했거나, 세션이 비정상 종료된 경우 수동 집계:
+Stop hook이 deeptalk 활성으로 bail했거나, 세션이 비정상 종료된 경우 수동 집계:
 
 ```bash
 python3 skills/dashboard/scripts/aggregate.py {cwd}
