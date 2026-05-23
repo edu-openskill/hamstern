@@ -219,3 +219,140 @@ def test_log_append_only_preserves_existing_blocks():
     assert "+ [결정] old decision" in out
     assert "## 2026-05-23 12:00 · session sess1" in out
     assert "+ [결정] new decision" in out
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Sub-C additions: sessions/{id}.md (full distill) + migration
+# ─────────────────────────────────────────────────────────────────────────────
+
+def write_session(session_id, ts, decisions, rejects, opens):
+    """Generate sessions/{session_id}.md content (test-only reference)."""
+    lines = [f"# Session {session_id}", "", f"_기록: {ts}_", "", "## 결정"]
+    for d in decisions:
+        lines.append(f"- {d}")
+    lines.extend(["", "## 실패·폐기"])
+    for r in rejects:
+        lines.append(f"- {r}")
+    lines.extend(["", "## 열린 질문"])
+    for o in opens:
+        lines.append(f"- {o}")
+    return "\n".join(lines) + "\n"
+
+
+def migrate_old_to_new(root):
+    """Idempotent migration: baby/mom/boss-hamster → sessions/ + decisions.md.
+
+    `root` is a pathlib.Path pointing to the project root (containing .hamstern/).
+    Returns (migrated: bool, backup_path: Path or None).
+    """
+    import shutil
+    from datetime import datetime, timezone
+    hamstern = root / ".hamstern"
+    has_old = any((hamstern / d).is_dir() for d in ("baby-hamster", "mom-hamster", "boss-hamster"))
+    if not has_old:
+        return (False, None)
+
+    ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
+    backup = root / f".hamstern.bak.{ts}"
+    shutil.copytree(hamstern, backup)
+
+    sessions = hamstern / "sessions"
+    sessions.mkdir(exist_ok=True)
+
+    baby = hamstern / "baby-hamster"
+    if baby.is_dir():
+        for f in baby.glob("*.md"):
+            target = sessions / f.name
+            shutil.move(str(f), str(target))
+        try:
+            baby.rmdir()
+        except OSError:
+            pass  # not empty (non-md files) — leave
+
+    boss = hamstern / "boss-hamster"
+    if (boss / "decisions.md").exists():
+        shutil.move(str(boss / "decisions.md"), str(hamstern / "decisions.md"))
+    if (boss / "decisions-log.md").exists():
+        shutil.move(str(boss / "decisions-log.md"), str(hamstern / "decisions-log.md"))
+
+    shutil.rmtree(hamstern / "mom-hamster", ignore_errors=True)
+    shutil.rmtree(boss, ignore_errors=True)
+
+    return (True, backup)
+
+
+def test_session_file_format_with_all_three_sections():
+    out = write_session(
+        "sess1", "2026-05-23T12:00:00",
+        decisions=["use git-root path (이유: portable)"],
+        rejects=["env var detection → 폐기 (이유: undocumented)"],
+        opens=["hot limit method"],
+    )
+    assert "# Session sess1" in out
+    assert "_기록: 2026-05-23T12:00:00_" in out
+    assert "## 결정" in out
+    assert "- use git-root path (이유: portable)" in out
+    assert "## 실패·폐기" in out
+    assert "- env var detection → 폐기 (이유: undocumented)" in out
+    assert "## 열린 질문" in out
+    assert "- hot limit method" in out
+
+
+def test_session_file_idempotent_replace(tmp_path):
+    """Same session_id re-call overwrites the session file (replace, not append)."""
+    sessions = tmp_path / ".hamstern" / "sessions"
+    sessions.mkdir(parents=True)
+    f = sessions / "sess1.md"
+    f.write_text(write_session("sess1", "2026-05-23T10:00:00",
+                                ["old decision"], [], []), encoding="utf-8")
+    # Second call with same id but different content
+    f.write_text(write_session("sess1", "2026-05-23T12:00:00",
+                                ["new decision"], [], []), encoding="utf-8")
+    content = f.read_text(encoding="utf-8")
+    assert "new decision" in content
+    assert "old decision" not in content
+
+
+def test_migrate_old_structure_to_new(tmp_path):
+    """Old baby/mom/boss-hamster tree → flat sessions/ + decisions.md, with backup."""
+    hamstern = tmp_path / ".hamstern"
+    (hamstern / "baby-hamster").mkdir(parents=True)
+    (hamstern / "baby-hamster" / "session_old1.md").write_text("old session 1", encoding="utf-8")
+    (hamstern / "baby-hamster" / "session_old2.md").write_text("old session 2", encoding="utf-8")
+    (hamstern / "mom-hamster").mkdir()
+    (hamstern / "mom-hamster" / "mom.md").write_text("mom aggregate", encoding="utf-8")
+    (hamstern / "boss-hamster").mkdir()
+    (hamstern / "boss-hamster" / "decisions.md").write_text("# 프로젝트 결정사항\n## Architecture\n- old\n", encoding="utf-8")
+    (hamstern / "boss-hamster" / "decisions-log.md").write_text("# Decisions Log\n", encoding="utf-8")
+
+    migrated, backup = migrate_old_to_new(tmp_path)
+    assert migrated is True
+    assert backup is not None and backup.exists()
+    # Backup preserves the old structure
+    assert (backup / "baby-hamster" / "session_old1.md").exists()
+    assert (backup / "mom-hamster" / "mom.md").exists()
+    assert (backup / "boss-hamster" / "decisions.md").exists()
+    # New structure correct
+    assert (hamstern / "sessions" / "session_old1.md").exists()
+    assert (hamstern / "sessions" / "session_old2.md").exists()
+    assert (hamstern / "decisions.md").exists()
+    assert (hamstern / "decisions-log.md").exists()
+    # Old dirs gone
+    assert not (hamstern / "baby-hamster").exists()
+    assert not (hamstern / "mom-hamster").exists()
+    assert not (hamstern / "boss-hamster").exists()
+
+
+def test_migrate_is_noop_when_no_old_structure(tmp_path):
+    """If only new structure exists, migrate does nothing."""
+    hamstern = tmp_path / ".hamstern"
+    (hamstern / "sessions").mkdir(parents=True)
+    (hamstern / "sessions" / "session_new.md").write_text("new", encoding="utf-8")
+    (hamstern / "decisions.md").write_text("# 프로젝트 결정사항\n", encoding="utf-8")
+
+    migrated, backup = migrate_old_to_new(tmp_path)
+    assert migrated is False
+    assert backup is None
+    # New structure intact
+    assert (hamstern / "sessions" / "session_new.md").exists()
+    assert (hamstern / "decisions.md").exists()
