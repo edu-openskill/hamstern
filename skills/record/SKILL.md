@@ -1,8 +1,9 @@
 ---
 name: record
 description: |
-  지금 세션의 결정·실패·열린질문을 정리해 프로젝트 결정 저장소(decisions.md)에 기록.
+  hamstern 의 단일 capture 진입점 — 지금 세션을 sessions/{id}.md 에 저장 + 결정사항을 decisions.md 에 누적.
   CLI·Desktop 양쪽 동작, FS 쓰기 불가 시 텍스트 폴백.
+  옛 baby/mom/boss 구조는 첫 호출 시 자동 마이그레이션.
   사용법:
     /hams:record         # 후보 확인 모드 (기본)
     /hams:record --yes   # 후보 자동 채택 (긴 세션 끝)
@@ -31,7 +32,7 @@ allowed-tools:
 
 ## Claude 실행 절차
 
-### Step 1 — 경로 해석 & 저장소 보장
+### Step 1 — 경로 해석 + 자동 마이그레이션 + 저장소 보장
 
 ```bash
 ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || ROOT=$(pwd)
@@ -40,12 +41,48 @@ echo "resolved root: $ROOT"
 
 사용자에게 resolved root 를 echo 해서 잘못된 경우 즉시 abort 가능하게 한다.
 
+#### 자동 마이그레이션 (idempotent, 안전 백업)
+
+옛 구조 (`baby-hamster/`, `mom-hamster/`, `boss-hamster/`) 가 존재하면 첫 record 호출 시 자동 이전:
+
 ```bash
-mkdir -p "$ROOT/.hamstern/boss-hamster" 2>/dev/null
+NEEDS_MIGRATE=0
+for d in baby-hamster mom-hamster boss-hamster; do
+  [ -d "$ROOT/.hamstern/$d" ] && NEEDS_MIGRATE=1
+done
+
+if [ "$NEEDS_MIGRATE" = "1" ]; then
+  TS=$(date -u +%Y%m%dT%H%M%S)
+  BACKUP="$ROOT/.hamstern.bak.$TS"
+  cp -r "$ROOT/.hamstern" "$BACKUP"
+  echo "백업 생성: $BACKUP"
+
+  mkdir -p "$ROOT/.hamstern/sessions"
+  if [ -d "$ROOT/.hamstern/baby-hamster" ]; then
+    mv "$ROOT/.hamstern/baby-hamster"/*.md "$ROOT/.hamstern/sessions/" 2>/dev/null
+    rmdir "$ROOT/.hamstern/baby-hamster" 2>/dev/null
+  fi
+  if [ -f "$ROOT/.hamstern/boss-hamster/decisions.md" ]; then
+    mv "$ROOT/.hamstern/boss-hamster/decisions.md" "$ROOT/.hamstern/decisions.md"
+  fi
+  if [ -f "$ROOT/.hamstern/boss-hamster/decisions-log.md" ]; then
+    mv "$ROOT/.hamstern/boss-hamster/decisions-log.md" "$ROOT/.hamstern/decisions-log.md"
+  fi
+  rm -rf "$ROOT/.hamstern/mom-hamster" "$ROOT/.hamstern/boss-hamster" 2>/dev/null
+  echo "마이그레이션 완료. 옛 데이터는 $BACKUP 에 보존."
+fi
+```
+
+마이그레이션 실패 시 (권한 등) record 진행 중단 + 에러 메시지 출력. 사용자가 백업 디렉토리로 수동 복구 가능.
+
+#### 저장소 보장
+
+```bash
+mkdir -p "$ROOT/.hamstern/sessions" 2>/dev/null
 ```
 
 `mkdir` 가 실패하면 (sandbox, EACCES 등) → **Step 5 (텍스트 폴백)** 으로.
-`mkdir` 가 성공하면 → Step 2 로.
+성공하면 → Step 2 로.
 
 ### Step 2 — Distill (현재 세션 컨텍스트에서 추출)
 
@@ -80,25 +117,45 @@ drop 할 번호를 쉼표로 답하세요 (없으면 enter):
 
 호출 인자에 `--yes` 가 있으면 이 확인 단계 skip 하고 전부 채택.
 
-### Step 4 — 병합 기록 (idempotent)
+### Step 4 — 원자적 이중 쓰기 (sessions/{id}.md + decisions.md)
 
-`$ROOT/.hamstern/boss-hamster/decisions.md` 가 없으면 빈 템플릿으로 시작:
+한 번 record 호출 = 두 파일에 동시 쓰기. 둘은 sequential 이지만 다음 호출이 idempotent 라 부분 실패도 자동 복구.
+
+#### (a) `sessions/{session_id}.md` — full distill 저장
+
+기존 파일이 있고 같은 session_id 면 in-place 갱신 (replace), 없으면 새로 생성. 포맷:
 
 ```markdown
-# 프로젝트 결정사항
+# Session {session_id}
 
-_마지막 업데이트: {ISO timestamp}_
+_기록: {ISO timestamp}_
+
+## 결정
+- {결정 1} (이유: {왜})
+- {결정 2} (이유: {왜})
+
+## 실패·폐기
+- {시도} → 폐기: {이유}
+
+## 열린 질문
+- {미정 사항}
 ```
 
-각 채택된 후보에 대해:
+빈 카테고리는 헤더만 남기거나 헤더도 생략 가능 (양쪽 다 acceptable, 일관성만 유지).
 
-1. **세션 마커 매칭**: 같은 `<!-- session: {id} -->` 마커가 이미 있으면 그 항목을 **갱신** (replace).
-2. **Jaccard 매칭**: 새 항목 텍스트 vs 기존 항목 텍스트의 Jaccard 유사도가 > 0.7 이면 **skip** (이미 있는 결정).
-3. **신규**: 위 두 케이스 아니면 해당 카테고리 (`## {category}`) 섹션 끝에 **append**. 카테고리 섹션이 없으면 새로 생성.
+#### (b) `decisions.md` — 결정 부분만 카테고리별 append
+
+각 채택된 결정 후보에 대해:
+
+1. **세션 마커 매칭**: 같은 `<!-- session: {id} -->` 마커가 이미 있으면 그 항목을 **갱신**.
+2. **Jaccard 매칭**: 새 항목 텍스트 vs 기존 항목 텍스트의 Jaccard 유사도 > 0.7 → **skip**.
+3. **신규**: 위 두 케이스 아니면 해당 카테고리 (`## {Architecture|Performance|UI|Testing|Deployment|Other}`) 섹션 끝에 **append**. 카테고리 섹션이 없으면 새로 생성.
 
 쓰기 시 `_마지막 업데이트: ...` 라인을 현재 ISO timestamp 로 갱신.
 
-이어서 `decisions-log.md` 에 append-only 블록을 추가:
+실패·폐기와 열린 질문은 decisions.md 에는 쓰지 않는다 (sessions/{id}.md 에만 보존). decisions.md 는 "현재 유효한 결정의 집합" 만 보유.
+
+#### (c) `decisions-log.md` — append-only 이력
 
 ```markdown
 ## {YYYY-MM-DD HH:MM} · session {id}
@@ -111,20 +168,35 @@ _마지막 업데이트: {ISO timestamp}_
 
 ### Step 5 — 텍스트 폴백 (FS 쓰기 차단 시)
 
-다음 메시지를 채팅에 출력:
-
 ```
 ⚠️ 파일 시스템 쓰기 불가 환경입니다 (예: Claude Desktop sandbox).
-아래 마크다운을 CLI 세션에서 {project_root}/.hamstern/boss-hamster/ 에 직접 병합하세요.
+아래 마크다운을 CLI 세션에서 {project_root}/.hamstern/ 에 직접 병합하세요.
+
+=== sessions/{session_id}.md (전체 교체) ===
+# Session {session_id}
+
+_기록: {ISO timestamp}_
+
+## 결정
+- ...
+
+## 실패·폐기
+- ...
+
+## 열린 질문
+- ...
 
 === decisions.md (병합용) ===
-(전체 decisions.md 내용을 Step 4 규칙대로 합성해 출력 — 기존 decisions.md 를 모르므로 새 항목만 카테고리별 정리해서 보여줌)
+(전체 decisions.md 내용을 Step 4(b) 규칙대로 합성해 출력)
 
 === decisions-log.md (append 블록) ===
-(Step 4 의 timestamp 블록)
+## {ts} · session {id}
++ [결정] ...
++ [실패] ...
++ [열림] ...
 ```
 
-포맷이 동일하므로 사용자가 복붙하면 CLI 의 record 호출과 같은 저장소로 수렴.
+세 블록 모두 포맷 동일 → 사용자가 복붙하면 CLI 의 record 호출과 같은 저장소로 수렴.
 
 ## 사용 예시
 
@@ -138,6 +210,7 @@ _마지막 업데이트: {ISO timestamp}_
 
 ## 다른 진입점과의 관계
 
-- **hook (CLI 자동)** 은 raw turn 을 baby 에 append. record 는 distilled 결정을 decisions 에 합침. 둘은 **서로 호출하지 않는다**. 같은 저장소 포맷만 공유.
-- **dashboard** 의 ✅ 핀 흐름도 같은 `decisions.md` 에 쓴다. record 와 dashboard 모두 Step 4 의 dedup (session 마커 + Jaccard) 을 따르므로 충돌하지 않음.
+- **`/hams:record` 가 hamstern 의 단일 capture 진입점**. hook (이전 CLI 자동 캡쳐) 은 Sub-C 에서 제거됨. start/stop 라이프사이클도 없음 — record 첫 호출 시 `.hamstern/sessions/` 가 자동 생성됨.
 - **/hams:remind** 는 record 가 쓴 `decisions.md` 를 그대로 환기 — 포맷 호환성이 핵심.
+- **/hams:audit-decisions** 는 record 가 쓴 `decisions.md` 와 `sessions/*.md` 를 재검토.
+- **/hams:dashboard** 는 read + 편집 (toggle/remove) — record 가 쓴 데이터 위에서 작동. Sub-D 가 github.io static + 브라우저 편집 UI 로 재설계 예정.
