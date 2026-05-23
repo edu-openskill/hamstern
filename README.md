@@ -47,15 +47,6 @@ cd ~/my-project
 /hams:start
 ```
 
-## cmux 툴 (macOS) 과의 공존
-
-햄스턴 본 도구 `cmux.app` (macOS) 가 실행 중이면 플러그인 후크는 **자동으로 양보**한다 (`.hamstern/.app-running` 마커 검사, 24시간 자동 만료). 즉:
-
-- macOS 사용자가 cmux + 플러그인 둘 다 설치 — cmux 가 우선, 플러그인은 폴백
-- Windows 사용자 — cmux 없으니 플러그인이 100% 처리
-
-데이터·CLAUDE.md 가 두 군데서 동시에 쓰여 충돌하는 일 없음.
-
 ---
 
 # `/hams:remind` — 결정사항 환기 (자동 주입 안 함)
@@ -405,6 +396,14 @@ DB·서버 추가 없이 두 가지가 기본 ON 으로 동작한다. 검색은 
 > 버전 관리는 git commit SHA 로 한다 (`/plugin update hams` 가 매 커밋마다 새 버전으로 인식). 아래는 사용자 관점의 굵직한 변화만 정리.
 >
 > ⚠️ 옛 항목의 명령어 예시(`--enable-search`, `--rebuild-remote`, `--edit` 등 단독 플래그 형태)는 **폐기된 표기**입니다. 현재 사용법은 위 본문 또는 `/hams:diary option` 참조.
+
+### 2026-05-23 — cmux 잔재 제거 + hooks 중복 정리 + 대시보드 검증
+
+- **cmux 양보 메커니즘 (`.app-running` 마커) 완전 제거** — cmux 가 macOS 전용 동반 앱이고 사용자 환경에서 사용 안 함. `hooks/user_prompt.py` / `hooks/stop.py` 양쪽의 `is_app_running()` 함수 + 분기 삭제. `skills/dashboard/dashboard.sh` (cmux 바이너리 호출용 죽은 스크립트) 삭제.
+- **`is_deeptalk_running()` 을 `hooks/_gate.py` 로 단일화** — 양쪽 hook 에 복붙되어 있던 함수를 게이트 모듈로 추출. 두 곳에서 동작이 미묘하게 달랐던 stale-marker auto-cleanup 차이도 자연 해소.
+- **orphan `migrate_claude_md.py` + 테스트 삭제** — 1개월간 어디서도 호출 안 됨. 옛 CLAUDE.md 의 `<!-- hamstern:decisions:start --> ... <!-- hamstern:decisions:end -->` 잔존 마커는 수동 삭제 필요 (대다수 사용자는 이미 정리됨). `skills/remind/SKILL.md` 의 호출 단계도 함께 제거.
+- **대시보드 작동 검증** — `python3 skills/dashboard/server.py --port 7777 --project {cwd}` 흐름 + `baby → mom → boss → /hams:remind` 핸드오프 무결성 6단계 manual 검증 완료. 결과: `docs/plans/2026-05-23-cleanup-verification.md`.
+- **SKILL.md 정합성 정정** — `skills/dashboard/SKILL.md` 의 cmux 언급 제거, `skills/audit-decisions/SKILL.md` 의 cmux example 을 일반 시나리오로 교체.
 
 ### 2026-04-27 — `strip_giscus.py` 일회용 유틸 (이미 발행된 포스트에서 댓글 블록 제거)
 
