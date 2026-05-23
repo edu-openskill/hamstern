@@ -21,12 +21,11 @@ allowed-tools:
 
 지금 세션에서 합의된 결정·실패·열린질문을 추출(distill)해 프로젝트의 `decisions.md` 에 병합한다. CLI·Desktop 양쪽에서 동일하게 동작 — Desktop sandbox 처럼 FS 쓰기가 안 되면 동일 마크다운을 채팅에 출력해 사용자가 CLI 에서 복붙할 수 있게 한다.
 
-## 왜 record 인가
+## 왜 record 인가 (단일 진입점)
 
-- `/hams:dashboard` 는 mom→boss 분석·핀 흐름이라 CLI 전용 (Opus 호출 + 백그라운드 서버).
-- Stop hook 은 baby/mom 자동 캡쳐라 CLI 전용 + 자동.
-- **Desktop App 에서도 결정을 같은 저장소에 남기려면 사용자 트리거 슬래시 명령이 필요** — 그게 record.
-- 진입점 분리: hook=raw turn, record=distilled decision, dashboard=Opus 정리. 셋 모두 종착지 `decisions.md` 동일.
+- **수동 = universal**: CLI · Desktop · (향후) 다른 클라이언트 모두에서 동작. hook 같은 자동 캡쳐는 환경 의존성·silent failure 위험.
+- **사용자 통제**: 사용자가 의식적으로 호출한 시점의 distill 만 남음. 노이즈 적음.
+- **단일 저장소**: sessions/{id}.md (세션 저널) + decisions.md (누적 결정) 두 파일에 atomic dual-write. dashboard 는 viewer + × 제거만, 쓰기는 record 한 곳에서만.
 
 자세한 규약은 [`docs/conventions.md`](../../docs/conventions.md) 참조.
 
