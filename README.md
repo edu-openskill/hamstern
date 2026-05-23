@@ -6,9 +6,8 @@ Claude Code 세션의 결정사항을 자동 추적하고, 웹 대시보드로 �
 
 | 명령 | 동작 |
 |---|---|
-| `/hams:start` | 현재 프로젝트에서 햄스턴 활성화 |
-| `/hams:stop` | 일시 비활성 (데이터 보존) |
 | `/hams:dashboard` | 결정사항 추출·핀·확정 웹 UI 열기 |
+| `/hams:record` | 단일 capture 진입점 — 세션을 sessions/{id}.md 저장 + 결정사항 decisions.md 누적 |
 | `/hams:remind` | 결정사항(`decisions.md`) 을 현재 세션에 환기 — 자동 주입 없음, 필요할 때만 |
 | `/hams:diary` | 로컬 `.md` / `.html` → GitHub Pages 블로그 게시 (멀티-프로파일, 검색 기본 ON, 댓글은 `/hams:diary giscus` 셋업 후) |
 | `/hams:diary option` | 한 화면 사용법·플래그·현재 설정 표시 (read-only) |
@@ -17,35 +16,6 @@ Claude Code 세션의 결정사항을 자동 추적하고, 웹 대시보드로 �
 | `/hams:rule` | 프로젝트 영구 룰 관리 (add/list/edit/remove/promote) — `.claude/rules/` |
 
 > 슬래시 명령어는 모두 콜론(`/hams:<name>`) 표기 — Claude Code 공식 plugin skill invocation 표준.
-
----
-
-# 🔒 후크 활성화 조건 (`/hams:start`)
-
-햄스턴 플러그인을 설치하면 2개의 후크 (`UserPromptSubmit`, `Stop`) 가 등록되지만, **프로젝트 루트에 `.hamstern/` 폴더가 있을 때만** 동작한다. 그 외 프로젝트에선 silent exit — 트랜스크립트 파싱·파일 생성 모두 스킵.
-
-> **왜 이렇게?** Claude Code 플러그인 후크는 enable 시 모든 세션에서 발화하는 게 기본 동작 ([공식 docs](https://code.claude.com/docs/en/hooks.md)). 햄스턴과 무관한 프로젝트까지 `.hamstern/baby-hamster/` 같은 폴더가 생겨선 안 된다. 그래서 후크 자체가 self-gate.
-
-## 사용법
-
-| 명령 | 동작 |
-|------|------|
-| `/hams:start` | 현재 프로젝트에서 햄스턴 활성화 — `.hamstern/{baby,mom,boss}-hamster/` + `config.json` + `README.md` 생성 |
-| `/hams:stop` | 일시 비활성 — `.hamstern/.disabled` 마커 생성 (데이터 보존) |
-| `rm -rf .hamstern` | 완전 제거 (모든 데이터 삭제) |
-
-```bash
-# 새 프로젝트에서 햄스턴 사용 시작
-cd ~/my-project
-# Claude Code 세션에서:
-/hams:start
-
-# 잠깐 끄기 (데이터는 그대로)
-/hams:stop
-
-# 다시 켜기
-/hams:start
-```
 
 ---
 
@@ -396,6 +366,18 @@ DB·서버 추가 없이 두 가지가 기본 ON 으로 동작한다. 검색은 
 > 버전 관리는 git commit SHA 로 한다 (`/plugin update hams` 가 매 커밋마다 새 버전으로 인식). 아래는 사용자 관점의 굵직한 변화만 정리.
 >
 > ⚠️ 옛 항목의 명령어 예시(`--enable-search`, `--rebuild-remote`, `--edit` 등 단독 플래그 형태)는 **폐기된 표기**입니다. 현재 사용법은 위 본문 또는 `/hams:diary option` 참조.
+
+### 2026-05-23 — record 단일 진입점 + 평탄화 (hooks/start/stop/mom 제거)
+
+- **자동화 인프라 전체 제거** — `hooks/` 디렉토리 (UserPromptSubmit + Stop hook + `_gate.py` + 모든 테스트) 통째 삭제. `/hams:start`, `/hams:stop` 스킬 삭제. `skills/dashboard/scripts/aggregate.py` 삭제. `.disabled`, `.deeptalk-running` 마커 개념 폐기.
+- **3-tier → 2-tier 평탄화** — `baby-hamster/`, `mom-hamster/`, `boss-hamster/` 개념 폐기. 새 구조는 `.hamstern/sessions/{id}.md` + `.hamstern/decisions.md` + `.hamstern/decisions-log.md` 만.
+- **`/hams:record` 가 단일 capture 진입점** — atomic dual-write: 한 번 호출 = 세션 distill 1회 → sessions/{id}.md 의 full distill (결정+실패+열린질문) + decisions.md 의 결정만 append. CLI · Desktop 양쪽 동작.
+- **자동 마이그레이션** — record 첫 호출 시 옛 baby/mom/boss 구조 감지 → `.hamstern.bak.{ts}/` 전체 백업 → 새 구조로 mv (idempotent).
+- **의존 스킬 path 갱신** — `/hams:remind`, `/hams:audit-decisions`, `/hams:dashboard` 의 path 가 새 평탄 구조 따름. dashboard 의 mom/analyze/cards 흐름 제거 (record 가 분석을 안 하므로). 편집 endpoint (× 결정 제거) 는 유지.
+- **마커 사용 스킬 정리** — `/hams:deeptalk`, `/hams:rule`, `/hams:why`, `/hams:skill-creator` 의 `.deeptalk-running` 마커 set/unset 단계 모두 삭제 (마커는 hook 침묵용이었는데 hook 자체 없으니 무의미).
+- **마켓플레이스** — `.claude-plugin/marketplace.json` 의 skills 배열에서 `./skills/start`, `./skills/stop` 제거 (13 → 11).
+- **공통 규약 문서** — `docs/conventions.md` 가 2-tier 구조로 전면 개정.
+- **Sub-D 로 deferred** — Dashboard 의 github.io static 호스팅 + 브라우저 토글·편집 UI + 크로스 머신.
 
 ### 2026-05-23 — 멀티 플랫폼 핸드오프 (`/hams:record` 신설)
 
