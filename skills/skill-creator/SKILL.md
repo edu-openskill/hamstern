@@ -33,16 +33,6 @@ Captures a workflow that just succeeded in the current session and writes it as 
 
 호출 즉시 다음 단계를 순서대로 수행합니다.
 
-### Step 0: deep-talk 마커 ON (즉시)
-
-스킬 작성 과정의 사용자 발화·확인 절차가 `.hamstern/baby-hamster/`에 노이즈로 기록되는 것을 막기 위해, 가장 먼저 다음 명령으로 마커 파일을 생성합니다.
-
-```bash
-mkdir -p .hamstern && touch .hamstern/.deeptalk-running
-```
-
-이 시점부터 `user_prompt.py`/`stop.py` 훅이 silent return하여 baby-hamster에 아무것도 추가하지 않습니다. **모든 종료 경로(성공/취소/오류)에서 반드시 마커를 제거**해야 합니다 (24시간 mtime 만료가 안전망이지만 의존하지 마세요).
-
 ### Step 1: 컨텍스트 추출
 
 현재 세션의 다음 정보를 분석합니다.
@@ -84,7 +74,7 @@ mkdir -p .hamstern && touch .hamstern/.deeptalk-running
 옵션 3개:
 1. **이대로 저장** — Step 4로 진행
 2. **수정 사항 알려주기** — 사용자가 텍스트로 수정 지시 → Step 2로 복귀해 반영 → Step 3 재진행
-3. **취소** — 마커 제거(`rm -f .hamstern/.deeptalk-running`) 후 종료. 아무것도 저장하지 않음.
+3. **취소** — 종료. 아무것도 저장하지 않음.
 
 승인 없이 파일을 절대 작성하지 않습니다.
 
@@ -100,12 +90,7 @@ mkdir -p .hamstern && touch .hamstern/.deeptalk-running
    - `description`이 "Use when" 또는 "...할 때 호출"로 시작하는지, 1024자 이하인지
    - 본문에 `Steps`와 `Common Mistakes` 섹션이 모두 있는지
    - 검증 실패 시 사용자에게 어떤 검증이 실패했는지 보고하고 작성한 파일 경로를 알려줌 (수동 수정 가능하도록)
-6. **마커 제거 (필수, 모든 종료 경로 공통)**:
-   ```bash
-   rm -f .hamstern/.deeptalk-running
-   ```
-   오류로 중단되더라도 이 명령은 반드시 시도하세요. 24시간 mtime 만료가 안전망이지만 즉시 정리가 정석.
-7. 완료 메시지:
+6. 완료 메시지:
    ```
    ✅ 스킬 생성: ./.claude/skills/<name>/SKILL.md
    ▶ 새 세션에서 /<name> 또는 description 트리거로 자동 호출됩니다.
@@ -119,7 +104,6 @@ mkdir -p .hamstern && touch .hamstern/.deeptalk-running
 - **hams 플러그인 디렉터리에 작성 시도** → 절대 금지. `~/.claude/plugins/...` 경로에 어떤 파일도 만들지 않음. 결과물은 반드시 cwd의 `.claude/skills/`로.
 - **승인 없이 작성** → 항상 Step 3 미리보기·승인 후 Step 4.
 - **파일 작성 후 검증 누락** → frontmatter가 잘못되면 Claude Code가 스킬을 인식 못 함. 자가검증 필수.
-- **`.deeptalk-running` 마커 정리 누락** → baby-hamster 기록이 다음 세션까지 묻혀버림 (24h 내). 성공/취소/오류 모든 종료 경로에서 `rm -f` 호출. Step 0에서 켜고 Step 4 마지막에 끄는 게 기본 규칙.
 
 ## Out of Scope (YAGNI)
 

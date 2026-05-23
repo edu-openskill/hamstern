@@ -38,20 +38,6 @@ allowed-tools:
 
 ## 공통 동작
 
-### baby-hamster 노이즈 차단
-
-`add`, `promote` 는 사용자와 다회 상호작용이 발생하므로 시작 시 마커 ON, 종료 시 OFF:
-
-```bash
-mkdir -p .hamstern && touch .hamstern/.deeptalk-running   # 시작
-# ...작업...
-rm -f .hamstern/.deeptalk-running                          # 종료 (성공/취소/오류 모두)
-```
-
-`list`, `edit`, `remove` 는 단일 트랜잭션에 가까워 마커 불필요.
-
-`.hamstern/` 디렉터리가 없는 프로젝트(hamstern 비활성)에서는 마커 생성을 건너뛴다.
-
 ### 템플릿 위치
 
 플레이스홀더 채우기 패턴은 `{plugin_root}/skills/rule/templates/` 의 5개 파일 사용. SKILL.md 기준 상대 경로로는 `./templates/` (같은 디렉터리).
@@ -70,14 +56,6 @@ rm -f .hamstern/.deeptalk-running                          # 종료 (성공/취�
 ## §add — 대화 컨텍스트에서 신규 룰 등록
 
 호출 즉시 다음 단계를 순서대로 수행한다.
-
-### Step A0: deep-talk 마커 ON
-
-```bash
-mkdir -p .hamstern && touch .hamstern/.deeptalk-running
-```
-
-`.hamstern/` 미존재 프로젝트면 건너뜀. 모든 종료 경로(성공/취소/오류/검증실패)에서 `rm -f` 필수.
 
 ### Step A1: 컨텍스트 추출
 
@@ -275,11 +253,7 @@ mkdir -p .claude/rules/references/{topic}
 
 치환 후 Write.
 
-### Step A8: 마커 OFF + 완료 메시지
-
-```bash
-rm -f .hamstern/.deeptalk-running
-```
+### Step A8: 완료 메시지
 
 출력:
 
@@ -471,14 +445,6 @@ rm -rf .claude/rules/references/{topic}/
 
 `/hams:why` 가 매칭하지 못했지만 사용자가 "이건 격상해야겠다" 싶을 때 명시적으로 트리거.
 
-### Step P1: 마커 ON
-
-```bash
-mkdir -p .hamstern && touch .hamstern/.deeptalk-running
-```
-
-`.hamstern/` 미존재 프로젝트면 그냥 종료 (잠정 룰이 있을 수가 없음 — `.hamstern/why/rules/` 는 hamstern 활성 프로젝트에만 존재). 모든 종료 경로에서 `rm -f` 필수.
-
 ### Step P2: topic 인자 검증
 
 호출: `/hams:rule promote {topic}`
@@ -572,11 +538,7 @@ test -f .hamstern/why/rules/{topic}.md
 
 날짜는 시스템 오늘 날짜 (`date +%F`).
 
-### Step P9: 마커 OFF + 완료 메시지
-
-```bash
-rm -f .hamstern/.deeptalk-running
-```
+### Step P9: 완료 메시지
 
 ```
 🚀 {topic} 영구 룰로 격상
@@ -605,9 +567,7 @@ rm -f .hamstern/.deeptalk-running
 - **포인터에 본문을 다 욱여넣음** → 토큰 부채. 포인터는 5~10줄, 자세한 건 `references/{topic}/`. 본문은 lazy load 되도록.
 - **mockup.html을 코드 타입 룰에도 생성** → 불필요. Step A2 타입 판정 결과를 따른다 — 코드 타입은 mockup 없음.
 - **paths frontmatter 글로브 인용 부호 누락** → `paths:` 의 글로브는 따옴표 필수 (`"src/components/**"`). 따옴표 빼면 YAML 파서 에러. 단일 따옴표/이중 따옴표 모두 가능하나 일관되게.
-- **`.hamstern/.deeptalk-running` 마커 정리 누락** → baby-hamster 노이즈가 다음 세션까지 묻힘. add/promote 의 모든 종료 경로(성공/취소/오류/검증실패)에서 `rm -f`. 24h mtime 만료가 안전망이지만 의존하지 말 것.
 - **promote 시 원본 그대로 두고 격상 마커도 안 박음** → 다음 호출 시 "이미 격상됐는지" 판단 불가 (Step P4). Step P8 필수.
 - **edit/remove 가 references 폴더 빠뜨림** → edit는 references 까지 모두 표시·수정 대상, remove는 폴더 전체 `rm -rf`.
 - **list 가 references/*.md 도 룰로 표시** → `.claude/rules/*.md` 셸 글로브는 직속만 매칭함을 확인. 재귀하려면 `**` 필요. references/ 하위는 자동 제외됨.
 - **mockup.html 의 `{{custom_css}}` 에 사용자 입력 그대로 주입** → `</style>` 시퀀스가 있으면 style 블록을 깨뜨리고 그 뒤가 raw HTML로 렌더됨. Step A7 #4 의 안전성 주의 참고.
-- **promote 가 `.hamstern/.deeptalk-running` 마커를 켜지 않고 시작** → 사용자와 다회 상호작용 발생 시 baby-hamster 에 노이즈로 기록됨. Step P1 필수.

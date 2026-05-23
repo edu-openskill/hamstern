@@ -22,18 +22,6 @@ allowed-tools:
 
 읽기 전용 탐색(Read/Glob/Grep)은 허용. 코드 수정 요청이 들어오면 **이 스킬을 종료한다**. 자동으로 다음 작업으로 넘어가지 않는다 — 종료 후 사용자가 직접 다음 단계를 지시하도록 한다.
 
-## 활성화 절차
-
-스킬이 발동되면 **반드시 먼저** baby-hamster 기록을 차단:
-
-```bash
-mkdir -p .hamstern && touch .hamstern/.deeptalk-running
-```
-
-이 마커가 있는 동안 hamstern hook은 user prompt와 stop 메시지를 baby-hamster에 기록하지 않는다. deep-talk 내용은 결정사항이 아니므로 mom/boss 분석 노이즈가 되지 않게 한다.
-
-`.hamstern/` 디렉토리가 없는 프로젝트(hamstern 비활성)에서는 마커 생성을 건너뛴다 — 어차피 기록되지 않음.
-
 ## brainstorming, gsd-explore와의 차이
 
 |              | deeptalk          | brainstorming      | gsd-explore       |
@@ -82,9 +70,8 @@ mkdir -p .hamstern && touch .hamstern/.deeptalk-running
 - 자연스러운: 결론에 도달하고 추가 질문 없음, 사용자가 다른 작업으로 전환 시도
 
 종료 시 **반드시**:
-1. 마커 제거: `rm -f .hamstern/.deeptalk-running`
-2. 저장 가치 판단 (아래 섹션)
-3. 사용자에게 명시적 종료 안내 — 자동으로 다음 작업으로 넘어가지 않는다.
+1. 저장 가치 판단 (아래 섹션)
+2. 사용자에게 명시적 종료 안내 — 자동으로 다음 작업으로 넘어가지 않는다.
 
 ## 요약 저장 기준
 
@@ -135,15 +122,11 @@ mkdir -p .hamstern && touch .hamstern/.deeptalk-running
 - 그 외 명시적 코드 수정 요청
 
 **종료 절차**:
-1. `.hamstern/.deeptalk-running` 마커 제거 (`rm -f .hamstern/.deeptalk-running`)
-2. 사용자에게 명시적 종료 안내 — "deep-talk 종료합니다. 코드 작업으로 넘어가시려면 다음 메시지로 지시해 주세요."
-3. **자동 라우팅 금지** — brainstorming/plan/debugging 등 후속 스킬을 Claude가 임의로 호출하지 않는다. 다음 작업의 진입은 사용자의 다음 메시지 또는 명시적 명령에서 시작.
+1. 사용자에게 명시적 종료 안내 — "deep-talk 종료합니다. 코드 작업으로 넘어가시려면 다음 메시지로 지시해 주세요."
+2. **자동 라우팅 금지** — brainstorming/plan/debugging 등 후속 스킬을 Claude가 임의로 호출하지 않는다. 다음 작업의 진입은 사용자의 다음 메시지 또는 명시적 명령에서 시작.
 
 **선택적 추천**: 종료 안내 시 available-skills 목록에 후속 작업에 적합한 스킬이 있다면 1줄 추천 가능 (강요 아님):
 > "참고: 구현 설계가 필요하시면 `superpowers:brainstorming` → `superpowers:writing-plans` 흐름이 유용합니다."
 
 추천 가능한 스킬이 없으면 추천 문구 생략. 사용자가 알아서 진행하도록 둠.
 
-## 마커 누수 안전망
-
-비정상 종료로 `.deeptalk-running` 마커가 남아도 mtime 24시간 초과 시 hook이 자동 정리한다 (`is_deeptalk_running` 함수의 stale-cleanup 로직). 별도 청소 스크립트 불필요.
