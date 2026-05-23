@@ -23,6 +23,41 @@ function renderEmpty(el, msg) {
   el.innerHTML = `<div class="empty">${msg}</div>`;
 }
 
+function renderSessionsList(sessions) {
+  const el = document.getElementById('sessions-list');
+  if (!sessions || sessions.length === 0) {
+    renderEmpty(el, '세션 없음');
+    return;
+  }
+  let html = '';
+  for (const name of sessions) {
+    const short = name.replace(/^session_/, '').replace(/\.md$/, '');
+    const escapedAttr = name.replace(/"/g, '&quot;');
+    html += `<div class="session-item" data-file="${escapedAttr}">${short}</div>`;
+  }
+  el.innerHTML = html;
+  el.addEventListener('click', onSessionClick);
+}
+
+let currentSessionEl = null;
+async function onSessionClick(e) {
+  const item = e.target.closest('.session-item');
+  if (!item) return;
+  const file = item.dataset.file;
+  if (currentSessionEl) currentSessionEl.classList.remove('active');
+  item.classList.add('active');
+  currentSessionEl = item;
+
+  const render = document.getElementById('session-render');
+  render.innerHTML = '<em>loading…</em>';
+  try {
+    const md = await fetchText(`${DATA_PATH}/sessions/${file}`);
+    render.innerHTML = DOMPurify.sanitize(marked.parse(md));
+  } catch (err) {
+    render.innerHTML = `<div class="empty">파일 로드 실패: ${file}</div>`;
+  }
+}
+
 function parseDecisions(md) {
   // returns [{category, body, raw}] in document order
   const out = [];
@@ -89,6 +124,8 @@ async function load() {
   } else {
     renderEmpty(document.getElementById('decisions-list'), '결정사항 없음');
   }
+
+  renderSessionsList(manifest.sessions || []);
 }
 
 load();
