@@ -51,9 +51,7 @@ def run(project_root: Path, text: str) -> RemoveResult:
     if removed_line is None:
         return RemoveResult(removed=False, reason=f"no matching decision for: {target!r}")
 
-    decisions_file.write_text("\n".join(out_lines) + "\n", encoding="utf-8")
-
-    ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
+    ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     entry = (
         f"\n---\n\n## {ts} | 핀 제거\n"
         f"- **결정:** {target}\n"
@@ -63,6 +61,8 @@ def run(project_root: Path, text: str) -> RemoveResult:
         log_file.write_text("# Decisions Log\n<!-- append-only. 수동 편집 금지. -->\n", encoding="utf-8")
     with log_file.open("a", encoding="utf-8") as f:
         f.write(entry)
+
+    decisions_file.write_text("\n".join(out_lines) + "\n", encoding="utf-8")
 
     return RemoveResult(removed=True, line=removed_line)
 
