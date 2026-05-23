@@ -55,3 +55,18 @@ def test_decisions_only_copies_file_and_sets_flag(tmp_path):
     assert manifest["decisions"] is True
     assert manifest["decisions_log"] is False
     assert manifest["sessions"] == []
+
+
+def test_decisions_log_copies_and_sets_flag(tmp_path):
+    project = _setup_project(
+        tmp_path,
+        decisions_log="# Decisions Log\n<!-- append-only -->\n",
+    )
+    out = tmp_path / "docs" / "data"
+
+    build.run(project_root=project, out_dir=out)
+
+    assert (out / "decisions-log.md").read_text(encoding="utf-8").startswith("# Decisions Log")
+    manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["decisions_log"] is True
+    assert manifest["decisions"] is False

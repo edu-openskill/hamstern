@@ -32,6 +32,11 @@ def run(project_root: Path, out_dir: Path) -> dict:
         shutil.copy2(decisions_src, out_dir / "decisions.md")
         manifest["decisions"] = True
 
+    log_src = src / "decisions-log.md"
+    if log_src.is_file():
+        shutil.copy2(log_src, out_dir / "decisions-log.md")
+        manifest["decisions_log"] = True
+
     (out_dir / "manifest.json").write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
