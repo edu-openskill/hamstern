@@ -38,3 +38,20 @@ def test_empty_hamstern_produces_empty_manifest(tmp_path):
     assert manifest["sessions"] == []
     assert not (out / "decisions.md").exists()
     assert not (out / "decisions-log.md").exists()
+
+
+def test_decisions_only_copies_file_and_sets_flag(tmp_path):
+    project = _setup_project(
+        tmp_path,
+        decisions="# 프로젝트 결정사항\n\n## Architecture\n- foo\n",
+    )
+    out = tmp_path / "docs" / "data"
+
+    build.run(project_root=project, out_dir=out)
+
+    assert (out / "decisions.md").read_text(encoding="utf-8") == \
+        "# 프로젝트 결정사항\n\n## Architecture\n- foo\n"
+    manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["decisions"] is True
+    assert manifest["decisions_log"] is False
+    assert manifest["sessions"] == []
