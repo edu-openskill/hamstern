@@ -59,3 +59,20 @@ def run(project_root: Path, out_dir: Path) -> dict:
         encoding="utf-8",
     )
     return manifest
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Bundle .hamstern -> docs/data")
+    parser.add_argument("--project", default=".", help="프로젝트 루트 (.hamstern/ 가 있는 곳)")
+    parser.add_argument("--out", default="docs/data", help="출력 디렉터리 (project 기준 상대 또는 절대)")
+    args = parser.parse_args()
+    project = Path(args.project).resolve()
+    out = Path(args.out)
+    if not out.is_absolute():
+        out = project / out
+    manifest = run(project_root=project, out_dir=out)
+    print(f"built: decisions={manifest['decisions']} log={manifest['decisions_log']} sessions={len(manifest['sessions'])}")
+
+
+if __name__ == "__main__":
+    main()

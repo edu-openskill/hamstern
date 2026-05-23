@@ -114,3 +114,22 @@ def test_stale_files_removed_on_rebuild(tmp_path):
     manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
     assert manifest["sessions"] == []
     assert manifest["decisions"] is False
+
+
+def test_idempotent_two_calls_same_content(tmp_path):
+    project = _setup_project(
+        tmp_path,
+        decisions="# d\n- x\n",
+        sessions={"s.md": "body\n"},
+    )
+    out = tmp_path / "docs" / "data"
+
+    build.run(project_root=project, out_dir=out)
+    first_decisions = (out / "decisions.md").read_text(encoding="utf-8")
+    first_session = (out / "sessions" / "s.md").read_text(encoding="utf-8")
+
+    build.run(project_root=project, out_dir=out)
+    assert (out / "decisions.md").read_text(encoding="utf-8") == first_decisions
+    assert (out / "sessions" / "s.md").read_text(encoding="utf-8") == first_session
+    m = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
+    assert m["sessions"] == ["s.md"]
