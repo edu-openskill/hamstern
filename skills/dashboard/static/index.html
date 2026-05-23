@@ -15,33 +15,14 @@ button { cursor: pointer; border: none; border-radius: 6px; padding: 8px 16px; f
 .btn-primary:disabled { background: #aaa; cursor: not-allowed; }
 .main { display: flex; flex: 1; overflow: hidden; gap: 1px; background: #ddd; }
 .col { background: white; overflow-y: auto; padding: 16px; }
-.col-baby { width: 200px; flex-shrink: 0; }
-.col-mom { flex: 1; }
+.col-sessions { width: 200px; flex-shrink: 0; }
 .col-decisions { width: 280px; flex-shrink: 0; }
 .col h2 { font-size: 14px; color: #666; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #eee; padding-bottom: 8px; }
-.baby-item { padding: 8px; border-radius: 4px; font-size: 12px; color: #333; margin-bottom: 4px; border: 1px solid #eee; }
-.baby-item.app { border-left: 3px solid #4CAF50; }
-.baby-item.hook { border-left: 3px solid #2196F3; }
-.baby-item small { color: #999; display: block; margin-top: 2px; }
-.card { border: 1px solid #e0e0e0; border-radius: 8px; padding: 14px; margin-bottom: 12px; background: white; }
-.card.mom-pinned { background: #FFF9C4; border-color: #F9A825; }
-.card.boss-confirmed { border-color: #4CAF50; border-width: 2px; }
-.card-category { font-size: 11px; color: #888; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
-.card-title { font-weight: 600; font-size: 14px; margin-bottom: 6px; }
-.card-bg { font-size: 12px; color: #666; margin-bottom: 10px; line-height: 1.5; }
-.card-actions { display: flex; gap: 8px; }
-.card-actions button { font-size: 12px; padding: 4px 10px; }
-.btn-mom-pin { background: #fff; border: 1px solid #ddd; color: #555; }
-.btn-mom-pin.active { background: #F9A825; border-color: #F9A825; color: white; }
-.btn-boss-pin { background: #E8F5E9; border: 1px solid #4CAF50; color: #2E7D32; }
-.btn-boss-pin:hover { background: #4CAF50; color: white; }
+.session-item { padding: 8px; border-radius: 4px; font-size: 12px; color: #333; margin-bottom: 4px; border: 1px solid #eee; }
 .decisions-item { padding: 8px 10px; border-radius: 4px; font-size: 13px; border: 1px solid #e0e0e0; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
 .decisions-item span:first-child { flex: 1; }
 .decisions-item .del { color: #ccc; cursor: pointer; font-size: 18px; line-height: 1; flex-shrink: 0; }
 .decisions-item .del:hover { color: #F44336; }
-.analyze-status { padding: 10px 12px; border-radius: 6px; margin-bottom: 12px; font-size: 13px; background: #E3F2FD; }
-.analyze-status.running { background: #FFF3E0; }
-.analyze-status.error { background: #FFEBEE; }
 pre { white-space: pre-wrap; font-size: 12px; color: #555; line-height: 1.6; }
 .section-label { font-size: 11px; color: #aaa; font-weight: 600; margin: 12px 0 6px; text-transform: uppercase; }
 .empty { color: #bbb; font-size: 13px; text-align: center; padding: 20px; }
@@ -52,21 +33,12 @@ pre { white-space: pre-wrap; font-size: 12px; color: #555; line-height: 1.6; }
   <span style="font-size:20px">🐹</span>
   <h1>hams-dashboard</h1>
   <div class="spacer"></div>
-  <button class="btn-primary" id="analyze-btn" onclick="runAnalyze()">🔍 재분석</button>
 </header>
 
 <div class="main">
-  <div class="col col-baby">
-    <h2>Baby MDs</h2>
-    <div id="baby-list"><div class="empty">없음</div></div>
-  </div>
-
-  <div class="col col-mom">
-    <h2>Mom MD + Audit</h2>
-    <div id="analyze-status" style="display:none"></div>
-    <div id="cards"></div>
-    <div class="section-label">Mom MD 원문</div>
-    <pre id="mom-content" style="color:#aaa;font-size:11px"></pre>
+  <div class="col col-sessions">
+    <h2>Sessions</h2>
+    <div id="sessions-list"><div class="empty">없음</div></div>
   </div>
 
   <div class="col col-decisions">
@@ -78,30 +50,22 @@ pre { white-space: pre-wrap; font-size: 12px; color: #555; line-height: 1.6; }
 </div>
 
 <script>
-const momPins = new Set();
-let analyzeInterval = null;
-let cardResults = [];
-
 async function load() {
-  const [mom, decisions, baby] = await Promise.all([
-    fetch('/api/mom').then(r => r.json()).catch(() => ({content:''})),
+  const [decisions, sessions] = await Promise.all([
     fetch('/api/decisions').then(r => r.json()).catch(() => ({content:''})),
-    fetch('/api/baby').then(r => r.json()).catch(() => ({files:[]})),
+    fetch('/api/sessions').then(r => r.json()).catch(() => ({files:[]})),
   ]);
-  document.getElementById('mom-content').textContent = mom.content || '(없음)';
   document.getElementById('decisions-content').textContent = decisions.content || '';
   renderDecisions(decisions.content);
-  renderBaby(baby.files || []);
-  checkStatus();
+  renderSessions(sessions.files || []);
 }
 
-function renderBaby(files) {
-  const el = document.getElementById('baby-list');
+function renderSessions(files) {
+  const el = document.getElementById('sessions-list');
   if (!files.length) { el.innerHTML = '<div class="empty">없음</div>'; return; }
   el.innerHTML = files.map(f => {
-    const type = f.name.startsWith('surface_') ? 'app' : 'hook';
-    const short = f.name.replace(/^(session_|surface_)/, '').substring(0, 14);
-    return `<div class="baby-item ${type}"><span>${short}</span><small>${type === 'app' ? '🐹 앱' : '🪝 훅'}</small></div>`;
+    const short = f.name.replace(/^(session_)/, '').replace(/\.md$/, '').substring(0, 20);
+    return `<div class="session-item"><span>${short}</span></div>`;
   }).join('');
 }
 
@@ -118,90 +82,10 @@ function renderDecisions(content) {
   ).join('');
 }
 
-function renderCards(results) {
-  cardResults = results;
-  const el = document.getElementById('cards');
-  if (!results.length) { el.innerHTML = '<div class="empty">분석 결과 없음</div>'; return; }
-  el.innerHTML = results.map((r, i) =>
-    `<div class="card ${momPins.has(i) ? 'mom-pinned' : ''}" id="card-${i}">
-      <div class="card-category">${r.category || ''}</div>
-      <div class="card-title">${r.decision}</div>
-      <div class="card-bg">${r.background || ''}</div>
-      <div class="card-actions">
-        <button class="btn-mom-pin ${momPins.has(i) ? 'active' : ''}" onclick="toggleMomPin(${i})">
-          ${momPins.has(i) ? '📌 mom 핀됨' : '📌 mom 핀'}
-        </button>
-        <button class="btn-boss-pin" onclick="confirmDecision(${i})">✅ 확정</button>
-      </div>
-    </div>`
-  ).join('');
-}
-
-function toggleMomPin(i) {
-  momPins.has(i) ? momPins.delete(i) : momPins.add(i);
-  const card = document.getElementById(`card-${i}`);
-  card.className = `card ${momPins.has(i) ? 'mom-pinned' : ''}`;
-  const btn = card.querySelector('.btn-mom-pin');
-  btn.className = `btn-mom-pin ${momPins.has(i) ? 'active' : ''}`;
-  btn.textContent = momPins.has(i) ? '📌 mom 핀됨' : '📌 mom 핀';
-  fetch('/api/pin/mom', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({index:i, pinned:momPins.has(i)}) });
-}
-
-async function confirmDecision(i) {
-  const r = cardResults[i];
-  await fetch('/api/pin/boss', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(r) });
-  document.getElementById(`card-${i}`).className = 'card boss-confirmed';
-  setTimeout(load, 300);
-}
-
 async function deleteDecision(i) {
   if (!confirm('이 결정사항을 제거할까요?')) return;
   await fetch(`/api/pin/boss/${i}`, { method:'DELETE' });
   setTimeout(load, 300);
-}
-
-async function runAnalyze() {
-  const btn = document.getElementById('analyze-btn');
-  btn.textContent = '⏳ 분석 중...';
-  btn.disabled = true;
-  const statusEl = document.getElementById('analyze-status');
-  statusEl.style.display = 'block';
-  statusEl.className = 'analyze-status running';
-  statusEl.textContent = 'Opus가 mom MD를 분석 중입니다...';
-
-  const pinnedItems = [];
-  momPins.forEach(i => {
-    if (cardResults[i]) pinnedItems.push(cardResults[i].decision);
-  });
-
-  await fetch('/api/analyze', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({mom_pins: pinnedItems}) });
-  if (analyzeInterval) clearInterval(analyzeInterval);
-  analyzeInterval = setInterval(checkStatus, 2000);
-}
-
-async function checkStatus() {
-  try {
-    const r = await fetch('/api/analyze/status').then(res => res.json());
-    const statusEl = document.getElementById('analyze-status');
-    const btn = document.getElementById('analyze-btn');
-
-    if (r.status === 'done') {
-      statusEl.className = 'analyze-status';
-      statusEl.textContent = `✅ 분석 완료 — ${(r.results||[]).length}개 결정사항 추출`;
-      btn.textContent = '🔍 재분석';
-      btn.disabled = false;
-      renderCards(r.results || []);
-      if (analyzeInterval) { clearInterval(analyzeInterval); analyzeInterval = null; }
-    } else if (r.status === 'running') {
-      statusEl.textContent = `⏳ 분석 중... (${Math.round((r.progress||0)*100)}%)`;
-    } else if (r.status === 'error') {
-      statusEl.className = 'analyze-status error';
-      statusEl.textContent = `❌ 오류: ${r.error}`;
-      btn.textContent = '🔍 재분석';
-      btn.disabled = false;
-      if (analyzeInterval) { clearInterval(analyzeInterval); analyzeInterval = null; }
-    }
-  } catch(e) {}
 }
 
 load();

@@ -1,7 +1,7 @@
 """hams-dashboard HTTP 서버
 사용법: python3 server.py [--port 7777] [--project /path/to/project]
 """
-import argparse, json, re, threading
+import argparse, json, re
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
@@ -46,22 +46,16 @@ class HamsHandler(BaseHTTPRequestHandler):
         if path == "/":
             index = STATIC_DIR / "index.html"
             self._html(index.read_text(encoding="utf-8") if index.exists() else "<h1>index.html 없음</h1>")
-        elif path == "/api/mom":
-            f = root / ".hamstern" / "mom-hamster" / "mom.md"
-            self._json({"content": f.read_text(encoding="utf-8") if f.exists() else ""})
         elif path == "/api/decisions":
-            f = root / ".hamstern" / "boss-hamster" / "decisions.md"
+            f = root / ".hamstern" / "decisions.md"
             self._json({"content": f.read_text(encoding="utf-8") if f.exists() else ""})
-        elif path == "/api/baby":
-            baby_dir = root / ".hamstern" / "baby-hamster"
+        elif path == "/api/sessions":
+            sessions_dir = root / ".hamstern" / "sessions"
             files = []
-            if baby_dir.exists():
-                for f in sorted(baby_dir.glob("*.md"), key=lambda x: x.stat().st_mtime, reverse=True):
+            if sessions_dir.exists():
+                for f in sorted(sessions_dir.glob("*.md"), key=lambda x: x.stat().st_mtime, reverse=True):
                     files.append({"name": f.name, "content": f.read_text(encoding="utf-8")})
             self._json({"files": files})
-        elif path == "/api/analyze/status":
-            sf = root / ".hamstern" / ".analyze-status.json"
-            self._json(json.loads(sf.read_text()) if sf.exists() else {"status": "idle", "results": []})
         else:
             self._json({"error": "not found"}, 404)
 
@@ -70,11 +64,7 @@ class HamsHandler(BaseHTTPRequestHandler):
         body = json.loads(self.rfile.read(length)) if length else {}
         path = urlparse(self.path).path.rstrip("/")
 
-        if path == "/api/analyze":
-            self._handle_analyze(body)
-        elif path == "/api/pin/mom":
-            self._json({"status": "ok"})  # mom 핀은 클라이언트 상태로만 관리
-        elif path == "/api/pin/boss":
+        if path == "/api/pin/boss":
             self._handle_boss_pin(body)
         else:
             self._json({"error": "not found"}, 404)
@@ -86,72 +76,12 @@ class HamsHandler(BaseHTTPRequestHandler):
         else:
             self._json({"error": "not found"}, 404)
 
-    def _handle_analyze(self, body):
-        root = Path(self.project_root)
-        mom = root / ".hamstern" / "mom-hamster" / "mom.md"
-        if not mom.exists():
-            self._json({"error": "mom.md 없음"}, 400)
-            return
-
-        sf = root / ".hamstern" / ".analyze-status.json"
-        sf.parent.mkdir(parents=True, exist_ok=True)
-        sf.write_text(json.dumps({"status": "running", "progress": 0.0, "results": []}))
-        self._json({"status": "running"})
-
-        mom_pins = body.get("mom_pins", [])
-        project_root = self.project_root
-
-        def run_opus():
-            import subprocess
-            try:
-                mom_content = mom.read_text(encoding="utf-8")
-                pins_hint = ""
-                if mom_pins:
-                    pins_hint = "## 우선 처리 항목\n" + "\n".join(f"- {p}" for p in mom_pins) + "\n\n"
-
-                prompt = f"""다음은 프로젝트 개발 대화 기록입니다. 중복을 제거하고 명확한 결정사항만 추출하세요.
-
-{pins_hint}## 전체 대화 기록
-{mom_content[:8000]}
-
-## 출력 형식
-JSON 배열로만 응답하세요 (코드블록 없이):
-[{{"decision": "결정사항", "category": "Architecture|Performance|UI|Testing|Deployment|Other", "background": "배경 1-2문장", "confidence": 0.9}}]"""
-
-                result = subprocess.run(
-                    ["claude", "--print", "--model", "claude-opus-4-6", prompt],
-                    capture_output=True, text=True, timeout=120
-                )
-                sf.write_text(json.dumps({"status": "running", "progress": 0.5, "results": []}))
-
-                raw = result.stdout.strip()
-                if "```" in raw:
-                    raw = raw.split("```")[1]
-                    if raw.startswith("json"):
-                        raw = raw[4:]
-                results = json.loads(raw.strip())
-
-                def jaccard(a, b):
-                    sa, sb = set(a.lower().split()), set(b.lower().split())
-                    return len(sa & sb) / len(sa | sb) if sa | sb else 0
-
-                deduped = []
-                for r in results:
-                    if not any(jaccard(r["decision"], d["decision"]) > 0.7 for d in deduped):
-                        deduped.append(r)
-
-                sf.write_text(json.dumps({"status": "done", "progress": 1.0, "results": deduped}))
-            except Exception as e:
-                sf.write_text(json.dumps({"status": "error", "error": str(e), "results": []}))
-
-        threading.Thread(target=run_opus, daemon=True).start()
-
     def _handle_boss_pin(self, body):
         root = Path(self.project_root)
-        boss_dir = root / ".hamstern" / "boss-hamster"
-        boss_dir.mkdir(parents=True, exist_ok=True)
-        decisions_file = boss_dir / "decisions.md"
-        log_file = boss_dir / "decisions-log.md"
+        decisions_dir = root / ".hamstern"
+        decisions_dir.mkdir(parents=True, exist_ok=True)
+        decisions_file = decisions_dir / "decisions.md"
+        log_file = decisions_dir / "decisions-log.md"
 
         decision = body.get("decision", "")
         category = body.get("category", "Other")
@@ -188,9 +118,9 @@ JSON 배열로만 응답하세요 (코드블록 없이):
 
     def _handle_boss_unpin(self, decision_id):
         root = Path(self.project_root)
-        boss_dir = root / ".hamstern" / "boss-hamster"
-        decisions_file = boss_dir / "decisions.md"
-        log_file = boss_dir / "decisions-log.md"
+        decisions_dir = root / ".hamstern"
+        decisions_file = decisions_dir / "decisions.md"
+        log_file = decisions_dir / "decisions-log.md"
 
         if not decisions_file.exists():
             self._json({"error": "decisions.md 없음"}, 404)
