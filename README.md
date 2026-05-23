@@ -397,6 +397,15 @@ DB·서버 추가 없이 두 가지가 기본 ON 으로 동작한다. 검색은 
 >
 > ⚠️ 옛 항목의 명령어 예시(`--enable-search`, `--rebuild-remote`, `--edit` 등 단독 플래그 형태)는 **폐기된 표기**입니다. 현재 사용법은 위 본문 또는 `/hams:diary option` 참조.
 
+### 2026-05-23 — 멀티 플랫폼 핸드오프 (`/hams:record` 신설)
+
+- **`/hams:record` 신규 스킬** — 지금 세션의 결정·실패·열린질문을 distill 해 `decisions.md` 에 idempotent 병합. **Claude Code CLI + Claude Desktop App 양쪽에서 동작** (Desktop sandbox 처럼 FS 쓰기 실패 시 동일 마크다운을 채팅 출력해 사용자가 CLI 에서 복붙).
+- **공통 규약 문서 `docs/conventions.md`** — 표준 저장소 레이아웃 + 경로 해석 의사코드 (`git rev-parse → pwd` 폴백) + 능력 프로브 패턴 + decisions.md / decisions-log.md 포맷 스펙. 향후 신규 스킬도 이 규약을 따른다.
+- **진입점 분리 명문화** — hook(자동/raw turn) ≠ record(수동/distilled) ≠ dashboard(Opus 정리). 셋 모두 같은 `decisions.md` 에 쓰되 서로 호출하지 않음.
+- **포맷 호환성 회귀 테스트** — `skills/record/test_record_format.py` 가 dashboard 의 pin 흐름과 record 가 같은 포맷에 수렴함을 6개 케이스로 검증.
+- **마켓플레이스 등록** — `.claude-plugin/marketplace.json` 의 skills 배열에 `./skills/record` 추가.
+- 출처 설계: `docs/plans/2026-05-22-record-handoff-redesign.md` 의 Phase 0 + Phase 1 만 채택. Phase 2-5 (라우팅 가드 / 계층 메모리 / 3 청중 분리 / 자동화) 는 추후 별도 sub-project.
+
 ### 2026-05-23 — cmux 잔재 제거 + hooks 중복 정리 + 대시보드 검증
 
 - **cmux 양보 메커니즘 (`.app-running` 마커) 완전 제거** — cmux 가 macOS 전용 동반 앱이고 사용자 환경에서 사용 안 함. `hooks/user_prompt.py` / `hooks/stop.py` 양쪽의 `is_app_running()` 함수 + 분기 삭제. `skills/dashboard/dashboard.sh` (cmux 바이너리 호출용 죽은 스크립트) 삭제.
