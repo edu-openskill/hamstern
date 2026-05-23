@@ -10,6 +10,7 @@ absence of `.hamstern/.disabled` (so users can pause hamstern in a project
 without deleting their data).
 """
 import re
+import time
 from pathlib import Path
 from typing import Optional
 
@@ -49,6 +50,28 @@ def is_hamstern_project(cwd: Optional[str]) -> bool:
         if not marker.is_dir():
             return False
         if (marker / ".disabled").exists():
+            return False
+        return True
+    except (OSError, ValueError):
+        return False
+
+
+def is_deeptalk_running(cwd: Optional[str]) -> bool:
+    """True if a fresh `.deeptalk-running` marker exists in `.hamstern/`.
+
+    The marker is set by skills (deeptalk, rule, skill-creator) that want
+    to suppress baby-hamster recording during multi-turn user interactions.
+    Auto-deletes stale markers older than 24 hours so a crashed session
+    doesn't permanently silence the hook.
+    """
+    if not cwd:
+        return False
+    try:
+        flag = Path(cwd) / ".hamstern" / ".deeptalk-running"
+        if not flag.exists():
+            return False
+        if time.time() - flag.stat().st_mtime > 86400:
+            flag.unlink(missing_ok=True)
             return False
         return True
     except (OSError, ValueError):
