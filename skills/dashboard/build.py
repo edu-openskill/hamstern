@@ -19,7 +19,7 @@ def run(project_root: Path, out_dir: Path) -> dict:
 
     if out_dir.exists():
         for child in out_dir.iterdir():
-            if child.is_file():
+            if child.is_symlink() or child.is_file():
                 child.unlink()
             elif child.is_dir():
                 shutil.rmtree(child)
