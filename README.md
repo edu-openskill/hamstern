@@ -21,7 +21,7 @@ Claude Code 세션의 결정사항을 자동 추적하고, 웹 대시보드로 �
 
 # `/hams:remind` — 결정사항 환기 (자동 주입 안 함)
 
-`/clear` 후 결정사항이 필요해지는 시점에 **명시적으로** `/hams:remind` 를 친다. 그러면 `boss-hamster/decisions.md` 본문이 그 세션에 출력되고, Claude 가 이후 응답에서 이를 따른다.
+`/clear` 후 결정사항이 필요해지는 시점에 **명시적으로** `/hams:remind` 를 친다. 그러면 `.hamstern/decisions.md` 본문이 그 세션에 출력되고, Claude 가 이후 응답에서 이를 따른다.
 
 ## 왜 자동 주입을 안 하는가
 

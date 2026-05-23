@@ -109,7 +109,7 @@ allowed-tools:
 {구현/검토가 필요하면 어떤 작업이 필요한지}
 ```
 
-저장은 `docs/discussions/` (프로젝트 루트 기준)이며, 이는 hamstern hook이 캡처하지 않는 일반 파일 쓰기이므로 baby-hamster에 영향 없음.
+저장은 `docs/discussions/` (프로젝트 루트 기준)이며, 이는 일반 파일 쓰기로 `.hamstern/sessions/` 와 무관하다 (record 가 명시적으로 호출되지 않는 한 캡처되지 않음).
 
 ## Red Flags — 이 스킬에서 빠져나가야 할 신호
 

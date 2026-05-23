@@ -18,7 +18,7 @@ model: opus
    - `enabledPlugins` 에서 `true` 인 항목 추출 → 설치된 플러그인 목록
 
 2. **decisions.md 읽기** (있으면)
-   - `{project_root}/.hamstern/boss-hamster/decisions.md`
+   - `{project_root}/.hamstern/decisions.md`
    - 이 프로젝트의 확정된 방향 파악
 
 3. **skills-registry.json 읽기** (있으면)
@@ -79,7 +79,7 @@ model: opus
 
 - `~/.claude/settings.json` — 설치된 플러그인 확인 (필수)
 - `~/.hamstern/skills-registry.json` — 스킬 메타데이터
-- `{project_root}/.hamstern/boss-hamster/decisions.md` — 프로젝트 방향
+- `{project_root}/.hamstern/decisions.md` — 프로젝트 방향
 
 ---
 

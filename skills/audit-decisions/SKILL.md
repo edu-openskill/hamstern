@@ -10,7 +10,7 @@ description: 과거 결정사항의 타당성 재검토 및 폐기 검증
 ## 동작 원리
 
 1. **decisions.md 읽기** — 현재 프로젝트의 핀된 결정사항 로드
-2. **배경 분석** — baby-hamster 기록에서 각 결정의 배경 파악
+2. **배경 분석** — sessions/*.md 기록에서 각 결정의 배경 파악
 3. **타당성 검증** — Opus가 Haiku 분석으로:
    - ✅ "이 결정은 여전히 타당합니다" (유지)
    - ⚠️ "수정이 필요합니다" (액션 제안 포함)
@@ -31,10 +31,10 @@ description: 과거 결정사항의 타당성 재검토 및 폐기 검증
 각 결정에 대해 다음 정보 표시:
 
 ```
-📌 결정사항: "baby/mom/boss 3폴더 구조 확정"
+📌 결정사항: "sessions + decisions 2-tier 구조 확정"
 ├─ 카테고리: architecture
-├─ 배경: (context.md에서 추출한 배경 정보)
-│  "이 3폴더 구조는..."
+├─ 배경: (sessions/*.md 에서 추출한 배경 정보)
+│  "이 2-tier 구조는..."
 ├─ 현재 상태: 이미 구현됨
 └─ 타당성: ⬛⬛⬛⬛⬜ (4/5) — 높음
 
@@ -52,10 +52,9 @@ description: 과거 결정사항의 타당성 재검토 및 폐기 검증
 
 분석:
   ⚠️ 수정 필요:
-  - 현재 baby-hamster stop 훅이 2단계로 기록되는데,
-    요약 제거 이후 턴 카운트 파일 사용이 줄었습니다.
-  - 제안: 턴 카운트 로직을 완전히 제거할지,
-    또는 다른 목적으로 활용할지 재검토 필요
+  - 현재 record 가 sessions/{id}.md + decisions.md 양쪽에 쓰는데,
+    decision 갱신 시 sessions 의 해당 항목도 동기화할지 미정.
+  - 제안: 단방향 (sessions → decisions) 으로 유지 vs 양방향 sync 도입.
   - 액션: [수정 필요로 마크] 또는 [새 결정 생성]
 ```
 
@@ -115,8 +114,8 @@ description: 과거 결정사항의 타당성 재검토 및 폐기 검증
 
 ### 입력 데이터
 
-1. `{project}/.hamstern/boss-hamster/decisions.md` — 현재 확정 결정사항
-2. `{project}/.hamstern/baby-hamster/t{n}_*.md` — 터미널 대화 기록
+1. `{project}/.hamstern/decisions.md` — 현재 확정 결정사항
+2. `{project}/.hamstern/sessions/*.md` — 세션별 distill (결정/실패/열린질문)
 
 ### 분석 엔진
 
@@ -128,8 +127,8 @@ description: 과거 결정사항의 타당성 재검토 및 폐기 검증
 변경 사항:
 
 ```
-{project}/.hamstern/boss-hamster/
-├─ decisions.md (재생성)
+{project}/.hamstern/
+└─ decisions.md (재생성)
 ```
 
 ---

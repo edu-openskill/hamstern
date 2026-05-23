@@ -5,20 +5,21 @@ set -euo pipefail
 # 프로젝트의 확정된 결정사항들을 재검토하고 타당성을 검증합니다.
 
 PROJECT_DIR="${1:-.}"
-DECISIONS_FILE="$PROJECT_DIR/.hamstern/boss-hamster/decisions.md"
-CONTEXT_FILE="$PROJECT_DIR/.hamstern/mom-hamster/context.md"
+DECISIONS_FILE="$PROJECT_DIR/.hamstern/decisions.md"
+SESSIONS_DIR="$PROJECT_DIR/.hamstern/sessions"
 
 if [[ ! -f "$DECISIONS_FILE" ]]; then
   echo "❌ Error: decisions.md not found at $DECISIONS_FILE"
   echo ""
   echo "Make sure you're in a hamstern project with:"
-  echo "  $PROJECT_DIR/.hamstern/boss-hamster/decisions.md"
+  echo "  $PROJECT_DIR/.hamstern/decisions.md"
+  echo "  (run /hams:record in a Claude session to create it)"
   exit 1
 fi
 
-if [[ ! -f "$CONTEXT_FILE" ]]; then
-  echo "⚠️  Warning: context.md not found at $CONTEXT_FILE"
-  echo "   Audit will proceed without background context"
+if [[ ! -d "$SESSIONS_DIR" ]]; then
+  echo "⚠️  Warning: sessions/ not found at $SESSIONS_DIR"
+  echo "   Audit will proceed without per-session background context"
 fi
 
 echo "🔍 Auditing Decisions in: $PROJECT_DIR"
@@ -48,10 +49,10 @@ for i in "${!decisions[@]}"; do
   echo "     Category: $category"
   echo ""
 
-  # 배경 정보 찾기
-  if [[ -f "$CONTEXT_FILE" ]]; then
-    if grep -q "$summary" "$CONTEXT_FILE" 2>/dev/null; then
-      echo "✓ Found in context.md"
+  # 배경 정보 찾기 — sessions/*.md 안에서 매칭
+  if [[ -d "$SESSIONS_DIR" ]]; then
+    if grep -rq "$summary" "$SESSIONS_DIR" 2>/dev/null; then
+      echo "✓ Found in sessions/"
     fi
   fi
 
