@@ -49,17 +49,12 @@ baby(turn 단위 raw 로그)는 노이즈가 많고 어떤 세션 파일을 골�
        mom         → mom-hamster 세션 요약(mom.md) 로드
      ```
 
-2. **boss 케이스에서만** CLAUDE.md 잔존 마커 정리 (idempotent — mom 로드는 CLAUDE.md 와 무관하므로 skip):
-   ```bash
-   python3 hooks/migrate_claude_md.py {claude_md_path}
-   ```
-
-3. **파일 존재 확인 후 본문 출력**:
+2. **파일 존재 확인 후 본문 출력**:
    ```bash
    cat <path>
    ```
 
-4. **출력 후 응답에 한 줄 메모 추가** (target에 따라 분기):
+3. **출력 후 응답에 한 줄 메모 추가** (target에 따라 분기):
    - boss: `> _위 결정사항이 이 세션에 환기됨. 진짜 컨텍스트 정리는 /clear._`
    - mom: `> _위 세션 요약이 이 세션에 환기됨. ✅ 확정 전 단계의 자연 컨텍스트입니다 — 결정으로 굳히려면 /hams:dashboard._`
 
