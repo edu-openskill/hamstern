@@ -3,33 +3,11 @@ from pathlib import Path
 from datetime import datetime, timezone
 
 sys.path.insert(0, str(Path(__file__).parent))
-from _gate import is_hamstern_project, is_noise_command
+from _gate import is_hamstern_project, is_noise_command, is_deeptalk_running
 
-
-def is_app_running(cwd: str) -> bool:
-    import time
-    flag = Path(cwd) / ".hamstern" / ".app-running"
-    if not flag.exists():
-        return False
-    age = time.time() - flag.stat().st_mtime
-    if age > 86400:
-        flag.unlink(missing_ok=True)
-        return False
-    return True
-
-def is_deeptalk_running(cwd: str) -> bool:
-    import time
-    flag = Path(cwd) / ".hamstern" / ".deeptalk-running"
-    if not flag.exists():
-        return False
-    age = time.time() - flag.stat().st_mtime
-    if age > 86400:
-        flag.unlink(missing_ok=True)
-        return False
-    return True
 
 def record_prompt(session_id: str, cwd: str, prompt: str) -> None:
-    if is_app_running(cwd) or is_deeptalk_running(cwd):
+    if is_deeptalk_running(cwd):
         return
     if is_noise_command(prompt):
         return

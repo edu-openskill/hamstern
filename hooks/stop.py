@@ -2,7 +2,7 @@ import sys, json, subprocess
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from _gate import is_hamstern_project, is_noise_command
+from _gate import is_hamstern_project, is_noise_command, is_deeptalk_running
 
 PLUGIN_ROOT = Path(__file__).resolve().parent.parent
 AGGREGATE_SCRIPT = PLUGIN_ROOT / "skills" / "dashboard" / "scripts" / "aggregate.py"
@@ -45,26 +45,8 @@ def _latest_user_prompt(transcript_path: str) -> str:
         return ""
 
 
-def is_app_running(cwd: str) -> bool:
-    import time
-    flag = Path(cwd) / ".hamstern" / ".app-running"
-    if not flag.exists():
-        return False
-    return time.time() - flag.stat().st_mtime <= 86400
-
-def is_deeptalk_running(cwd: str) -> bool:
-    import time
-    flag = Path(cwd) / ".hamstern" / ".deeptalk-running"
-    if not flag.exists():
-        return False
-    age = time.time() - flag.stat().st_mtime
-    if age > 86400:
-        flag.unlink(missing_ok=True)
-        return False
-    return True
-
 def record_stop(session_id: str, cwd: str, transcript_path: str) -> None:
-    if is_app_running(cwd) or is_deeptalk_running(cwd):
+    if is_deeptalk_running(cwd):
         return
     if is_noise_command(_latest_user_prompt(transcript_path)):
         return
