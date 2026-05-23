@@ -91,3 +91,26 @@ def test_sessions_copied_and_listed_in_manifest(tmp_path):
         "session_2026-05-22.md",
         "session_2026-05-23.md",
     ]
+
+
+def test_stale_files_removed_on_rebuild(tmp_path):
+    project = _setup_project(
+        tmp_path,
+        decisions="# decisions\n- A\n",
+        sessions={"session_old.md": "old\n"},
+    )
+    out = tmp_path / "docs" / "data"
+
+    build.run(project_root=project, out_dir=out)
+    assert (out / "sessions" / "session_old.md").exists()
+
+    (project / ".hamstern" / "sessions" / "session_old.md").unlink()
+    (project / ".hamstern" / "decisions.md").unlink()
+
+    build.run(project_root=project, out_dir=out)
+
+    assert not (out / "sessions" / "session_old.md").exists(), "stale session 남음"
+    assert not (out / "decisions.md").exists(), "stale decisions.md 남음"
+    manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["sessions"] == []
+    assert manifest["decisions"] is False

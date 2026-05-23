@@ -17,6 +17,12 @@ def run(project_root: Path, out_dir: Path) -> dict:
     out_dir = Path(out_dir)
     src = project_root / ".hamstern"
 
+    if out_dir.exists():
+        for child in out_dir.iterdir():
+            if child.is_file():
+                child.unlink()
+            elif child.is_dir():
+                shutil.rmtree(child)
     out_dir.mkdir(parents=True, exist_ok=True)
 
     manifest = {
