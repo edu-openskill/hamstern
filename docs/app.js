@@ -58,6 +58,45 @@ async function onSessionClick(e) {
   }
 }
 
+function parseLog(md) {
+  // decisions-log.md 의 `## YYYY-MM-DDTHH:MM:SS | 핀 추가|제거` 블럭 파싱.
+  // 반환: [{time, event, body}], 최신순.
+  const blocks = [];
+  const lines = md.split('\n');
+  let current = null;
+  for (const ln of lines) {
+    const m = ln.match(/^##\s+(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z?)\s*\|\s*(.+)$/);
+    if (m) {
+      if (current) blocks.push(current);
+      current = { time: m[1], event: m[2].trim(), body: [] };
+    } else if (current) {
+      current.body.push(ln);
+    }
+  }
+  if (current) blocks.push(current);
+  blocks.reverse();
+  return blocks;
+}
+
+function renderLog(md) {
+  const el = document.getElementById('log-list');
+  if (!md || !md.trim()) { renderEmpty(el, '로그 없음'); return; }
+  const blocks = parseLog(md);
+  if (blocks.length === 0) { renderEmpty(el, '로그 없음'); return; }
+  let html = '';
+  for (const b of blocks) {
+    const cls = b.event.includes('추가') ? 'event-pin'
+              : b.event.includes('제거') ? 'event-unpin' : '';
+    const bodyHtml = DOMPurify.sanitize(marked.parse(b.body.join('\n').trim() || ''));
+    html += `<div class="log-card">
+      <div class="time">${b.time}</div>
+      <div class="${cls}">${b.event}</div>
+      <div>${bodyHtml}</div>
+    </div>`;
+  }
+  el.innerHTML = html;
+}
+
 function parseDecisions(md) {
   // returns [{category, body, raw}] in document order
   const out = [];
@@ -126,6 +165,13 @@ async function load() {
   }
 
   renderSessionsList(manifest.sessions || []);
+
+  if (manifest.decisions_log) {
+    const logMd = await fetchText(`${DATA_PATH}/decisions-log.md`);
+    renderLog(logMd);
+  } else {
+    renderEmpty(document.getElementById('log-list'), '로그 없음');
+  }
 }
 
 load();
