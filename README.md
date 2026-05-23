@@ -6,7 +6,7 @@ Claude Code 세션의 결정사항을 자동 추적하고, 웹 대시보드로 �
 
 | 명령 | 동작 |
 |---|---|
-| `/hams:dashboard` | 결정사항 추출·핀·확정 웹 UI 열기 |
+| `/hams:dashboard` | `.hamstern` 스냅샷을 정적 gh-pages 로 publish + viewer 오픈 |
 | `/hams:record` | 단일 capture 진입점 — 세션을 sessions/{id}.md 저장 + 결정사항 decisions.md 누적 |
 | `/hams:remind` | 결정사항(`decisions.md`) 을 현재 세션에 환기 — 자동 주입 없음, 필요할 때만 |
 | `/hams:diary` | 로컬 `.md` / `.html` → GitHub Pages 블로그 게시 (멀티-프로파일, 검색 기본 ON, 댓글은 `/hams:diary giscus` 셋업 후) |
@@ -378,6 +378,16 @@ DB·서버 추가 없이 두 가지가 기본 ON 으로 동작한다. 검색은 
 - **마켓플레이스** — `.claude-plugin/marketplace.json` 의 skills 배열에서 `./skills/start`, `./skills/stop` 제거 (13 → 11).
 - **공통 규약 문서** — `docs/conventions.md` 가 2-tier 구조로 전면 개정.
 - **Sub-D 로 deferred** — Dashboard 의 github.io static 호스팅 + 브라우저 토글·편집 UI + 크로스 머신.
+
+### Sub-project D — Dashboard static gh-pages + browser edit UI (2026-05-23)
+
+- 로컬 Python HTTP 서버 (`skills/dashboard/server.py`) 와 `static/` 디렉터리 제거.
+- `/hams:dashboard` 가 `skills/dashboard/build.py` 로 `.hamstern/*.md` → `docs/data/` 번들 + commit·push + `https://edu-openskill.github.io/hamstern/` 오픈.
+- 정적 viewer: `docs/{index.html, app.js, style.css}`. CDN 의존성 = marked.js + DOMPurify 2개.
+- 편집 흐름: 브라우저 read-only → `[×]` 클릭 → 클립보드 `/hams:audit-decisions remove "<text>"` → 사용자 세션 → 다음 dashboard 호출 시 publish.
+- `skills/audit-decisions` 에 `remove "<text>"` 직접 args 형식 추가 (`remove.py` + 5 pytest 케이스).
+- repo 이전: `getinthere-private-job/hamstern-plugin` → `edu-openskill/hamstern`.
+- GitHub Pages 활성화는 1회성 manual step (Settings → Pages → Source: main /docs).
 
 ### 2026-05-23 — 멀티 플랫폼 핸드오프 (`/hams:record` 신설)
 
