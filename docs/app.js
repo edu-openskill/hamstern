@@ -220,4 +220,21 @@ async function load() {
   }
 }
 
+function activateTab(name) {
+  document.querySelectorAll('nav.tabs button').forEach(b => {
+    b.classList.toggle('active', b.dataset.tab === name);
+  });
+  document.querySelectorAll('.col').forEach(c => {
+    c.classList.toggle('active', c.dataset.tab === name);
+  });
+}
+
+document.getElementById('tabs').addEventListener('click', (e) => {
+  if (e.target.tagName === 'BUTTON' && e.target.dataset.tab) {
+    activateTab(e.target.dataset.tab);
+  }
+});
+
+activateTab('decisions');
+
 load();
