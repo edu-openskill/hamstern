@@ -32,7 +32,7 @@ function renderSessionsList(sessions) {
   let html = '';
   for (const name of sessions) {
     const short = name.replace(/^session_/, '').replace(/\.md$/, '');
-    const escapedAttr = name.replace(/"/g, '&quot;');
+    const escapedAttr = name.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
     html += `<div class="session-item" data-file="${escapedAttr}">${short}</div>`;
   }
   el.innerHTML = html;
@@ -182,7 +182,7 @@ function renderDecisions(md) {
   for (const [cat, list] of byCat) {
     html += `<div class="decision-category">${cat}</div>`;
     for (const it of list) {
-      const escapedAttr = it.body.replace(/"/g, '&quot;');
+      const escapedAttr = it.body.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
       html += `<div class="decision-item">
         <span class="text">${DOMPurify.sanitize(it.body)}</span>
         <span class="del" data-text="${escapedAttr}" title="제거">×</span>
