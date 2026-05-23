@@ -63,7 +63,7 @@ Sub-project A 의 cleanup 으로 hooks 가 정리되었으나, hook 자체는 **
 | `docs/conventions.md` | 표준 저장소 레이아웃 + 경로 해석 의사코드 + 포맷 스펙. Sub-project A 의 결과물 (`.hamstern/{baby,mom,boss}-hamster/` + `decisions.md`) 을 공식 문서화. |
 | `skills/record/SKILL.md` | `/hams:record` 슬래시 명령. 5-step 본문 + 두 포맷 스펙 inline. |
 | `skills/record/test_record_format.py` | Layer 2 포맷 호환성 회귀 테스트 (hooks/ 의 sister-test 컨벤션과 동일). |
-| `docs/plans/2026-05-24-record-verification.md` | Layer 3 manual 검증 노트 (작업 완료 후 생성). |
+| `docs/plans/2026-05-23-record-verification.md` | Layer 3 manual 검증 노트 (작업 완료 후 생성). |
 
 ### 신규 마켓플레이스 등록
 
@@ -209,7 +209,7 @@ _마지막 업데이트: {ISO timestamp}_
 
 helper module 은 두지 않음 (YAGNI) — SKILL.md 의 의사코드만 따르는 test-only 보조 함수로 처리.
 
-**Layer 3 — Manual 검증 (`docs/plans/2026-05-24-record-verification.md`)**
+**Layer 3 — Manual 검증 (`docs/plans/2026-05-23-record-verification.md`)**
 
 1. CLI 세션에서 `/hams:record` → 후보 추출 → 확인 → `decisions.md` 기록 ✅/❌
 2. 같은 세션 두 번째 호출 → 중복 없음 ✅/❌
