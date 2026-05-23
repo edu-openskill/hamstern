@@ -22,8 +22,6 @@
         "./skills/why",
         "./skills/rule",
         "./skills/diary",
-        "./skills/start",
-        "./skills/stop",
         "./skills/deeptalk",
         "./skills/record"
       ]
