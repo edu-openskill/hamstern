@@ -1,36 +1,60 @@
 ---
 name: dashboard
-description: Hamstern 대시보드 웹 UI 실행 — sessions + decisions 뷰어 + 결정사항 × 제거.
+description: hamstern 정적 dashboard publish + 브라우저 viewer 오픈 — .hamstern → docs/data 번들 후 commit·push, gh-pages 가 serve.
 ---
 
 # /hams:dashboard
 
-Hamstern 프로젝트 관리 대시보드를 웹 브라우저에서 엽니다. **결정사항 viewer + × 제거**가 주 역할입니다.
+`.hamstern/decisions.md`, `decisions-log.md`, `sessions/*.md` 의 현재 스냅샷을 `docs/data/` 로 번들하고 GitHub 으로 push 한 뒤 브라우저에서 정적 viewer 를 연다.
 
-## 책임 분리
+## 책임
 
-- **결정사항 viewer + toggle/remove** → 이 대시보드의 역할
-- **결정사항 쓰기** → `/hams:record` 가 담당 (Sub-C 에서 단일 진입점으로 통일)
-- **Sub-D 에서 github.io static + 브라우저 편집 UI 로 재설계 예정**
+- **publish** — `.hamstern/*.md` 를 `docs/data/` 로 복사 + `manifest.json` 생성
+- **commit + push** — `docs/data/` 변경 시 chore commit + main push
+- **viewer 오픈** — `https://edu-openskill.github.io/hamstern/`
 
-## 기능
+쓰지 않는 것:
+- `.hamstern/*.md` (record/audit-decisions 가 관리)
+- 인증·서버 (정적 사이트)
 
-- **Sessions** — `.hamstern/sessions/*.md` (record 가 작성한 세션 distill) 목록
-- **Decisions** — 현재 확정된 결정사항 (`.hamstern/decisions.md`)
-- **× 제거** — 개별 결정사항 삭제 (편집 endpoint)
+## 동작 (Claude 가 실행)
 
-## 동작 (Claude가 직접 실행)
+1. **번들**
+   ```
+   python3 skills/dashboard/build.py --project .
+   ```
+   stderr / non-zero exit 시 중단 (commit·push 스킵).
 
-```bash
-/hams:dashboard [--port 7777]
-```
+2. **변경 감지**
+   ```
+   git status --short docs/data/
+   ```
 
-Claude 실행 절차:
-1. 포트 충돌 정리: `python3 -c "import subprocess; subprocess.run(['bash','-c','lsof -ti:7777 | xargs kill -9 2>/dev/null'], capture_output=True)"`
-2. 서버 시작: `python3 skills/dashboard/server.py --port 7777 --project {cwd}`
-3. 브라우저 오픈 (Windows): `start http://localhost:7777`
+3. **commit + push** (출력에 변경 있으면)
+   ```
+   git add docs/data/
+   git commit -m "chore(dashboard): refresh data $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+   git push origin main
+   ```
+
+4. **브라우저 오픈** (플랫폼별)
+   - Windows: `start https://edu-openskill.github.io/hamstern/`
+   - macOS: `open https://edu-openskill.github.io/hamstern/`
+   - Linux: `xdg-open https://edu-openskill.github.io/hamstern/`
+
+## 1회성 GitHub Pages 활성화
+
+repo 의 Settings → Pages → Source: `Deploy from a branch` → Branch: `main` → Folder: `/docs` → Save. 활성화 후 1~2분 대기.
+
+## 편집 흐름
+
+브라우저는 read-only. 결정사항 `[×]` 클릭 → 클립보드에 `/hams:audit-decisions remove "<text>"` 복사 → Claude 세션에 붙여넣어 실행. 다음 `/hams:dashboard` 호출 시 변경 반영.
 
 ## 데이터
 
-- `.hamstern/sessions/*.md` — 세션 기록 (record 가 작성)
-- `.hamstern/decisions.md` — 확정 결정사항 (record 가 쓴 결정사항)
+| 소스 | 출력 |
+|---|---|
+| `.hamstern/decisions.md` | `docs/data/decisions.md` |
+| `.hamstern/decisions-log.md` | `docs/data/decisions-log.md` |
+| `.hamstern/sessions/*.md` | `docs/data/sessions/<name>.md` |
+| — | `docs/data/manifest.json` (build.py 가 생성) |
