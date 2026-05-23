@@ -97,6 +97,52 @@ function renderLog(md) {
   el.innerHTML = html;
 }
 
+function showToast(msg, ms = 3000) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.remove('hidden');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => el.classList.add('hidden'), ms);
+}
+
+function escapeForSlashCommand(text) {
+  // `"` 를 backslash escape — audit-decisions remove.py 와 대응
+  return text.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+}
+
+async function copyToClipboard(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch (e) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch {}
+    document.body.removeChild(ta);
+    return ok;
+  }
+}
+
+document.getElementById('decisions-list').addEventListener('click', async (e) => {
+  const del = e.target.closest('.del');
+  if (!del) return;
+  const text = del.dataset.text;
+  if (!text) return;
+  const cmd = `/hams:audit-decisions remove "${escapeForSlashCommand(text)}"`;
+  const ok = await copyToClipboard(cmd);
+  if (ok) {
+    showToast('복사됨 — Claude 세션에 붙여넣어 실행');
+  } else {
+    showToast('복사 실패 — 콘솔에서 복사하세요');
+    console.log('COPY THIS:', cmd);
+  }
+});
+
 function parseDecisions(md) {
   // returns [{category, body, raw}] in document order
   const out = [];
