@@ -6,9 +6,14 @@ Claude Code 세션의 결정사항을 자동 추적하고, 웹 대시보드로 �
 
 | 명령 | 동작 |
 |---|---|
-| `/hams:dashboard` | 로컬 dashboard serve (모든 프로젝트 동작). `--publish` 시 gh-pages |
+| `/hams:dashboard` | multi-project dashboard (hamstern-data 기반). `--publish` 로 gh-pages |
+| `/hams:init`             | 새 hamstern 프로젝트 생성 (UUID + scaffolding)                     |
+| `/hams:link`             | 기존 프로젝트로 active 바인딩                                       |
 | `/hams:record` | 단일 capture 진입점 — 세션을 sessions/{id}.md 저장 + 결정사항 decisions.md 누적 |
 | `/hams:remind` | 결정사항(`decisions.md`) 을 현재 세션에 환기 — 자동 주입 없음, 필요할 때만 |
+| `/hams:save-mockup`      | HTML/이미지 mockup 을 hamstern-data 에 보존                       |
+| `/hams:migrate-project`  | 기존 .hamstern/ → hamstern-data 이전 (1회성)                      |
+| `/hams:rebuild-index`    | projects/_index.json 재생성 (복구용)                              |
 | `/hams:diary` | 로컬 `.md` / `.html` → GitHub Pages 블로그 게시 (멀티-프로파일, 검색 기본 ON, 댓글은 `/hams:diary giscus` 셋업 후) |
 | `/hams:diary option` | 한 화면 사용법·플래그·현재 설정 표시 (read-only) |
 | `/hams:audit-decisions` | 과거 결정사항의 타당성 재검토 |
@@ -398,6 +403,27 @@ DB·서버 추가 없이 두 가지가 기본 ON 으로 동작한다. 검색은 
 - `/hams:dashboard --publish` = Sub-D 의 gh-pages 흐름 보존.
 - SKILL.md 의 plugin 경로 탐지: `~/.claude/plugins/cache/hamstern/hams/*/` glob 으로 가장 최근 mtime 선택 (env var `$CLAUDE_PLUGIN_ROOT` 미신뢰).
 - 9 pytest 케이스 (translate_path 5 + traversal 2 + pick_port 1 + e2e HTTPServer 1).
+
+### Sub-project F — hamstern-data Repo + UUID per Project (2026-05-24)
+
+- **git-as-DB 패턴 도입** — 사용자의 personal `hamstern-data` repo 하나에 모든 프로젝트의 결정사항·세션·mockup 을 `projects/{uuid}/` 디렉터리 격리로 누적.
+- **5 신규 skill**: `init` (프로젝트 생성), `link` (active 바인딩), `save-mockup` (HTML/이미지 cross-session 보존), `migrate-project` (기존 .hamstern/ 이전), `rebuild-index` (복구).
+- **4 기존 skill 갱신**: `record`/`remind`/`dashboard`/`audit-decisions remove` 가 hamstern-data 경로 사용.
+- **active-project.json** — 디바이스별 `~/.config/hamstern/active-project.json` 으로 active UUID 캐시. multi-device 자연 sync.
+- **build.py multi-project** — `run_multiproject()` + root manifest (schema_version=2).
+- **Multi-project dashboard** — 메인 페이지 (프로젝트 목록 + 검색) + per-project 4-column view (sessions/decisions/mockups/log).
+- **remind 진화** — 모든 decisions + 최근 N=2 sessions (8KB cap). `--deep` 으로 N=5. `--mockups` 로 mockup 메타 포함.
+- **diary 변경 없음** — Sub-D verification.md 의 결정 반영.
+- Three 병렬 research (AI memory 도구, ADR 생태계, 객관 비교) 결과 git-backed 만장일치 추천.
+
+#### hamstern-data 첫 셋업 가이드
+
+1. GitHub 에서 새 repo 생성: `hamstern-data` (private 권장)
+2. 사용자의 머신에 clone (기본 위치: `~/.claude/hamstern-data`)
+3. Claude 세션에서 첫 호출: `/hams:init "내 첫 프로젝트"`
+4. 자동으로 active 바인딩 + commit + push
+5. (옵션) GitHub Settings → Pages → main /docs 활성화 → `/hams:dashboard --publish` 로 dashboard 게시
+6. 추가 디바이스: hamstern-data clone + `/hams:link "프로젝트 이름"`
 
 ### 2026-05-23 — 멀티 플랫폼 핸드오프 (`/hams:record` 신설)
 

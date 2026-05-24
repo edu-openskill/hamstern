@@ -15,15 +15,20 @@
       "skills": [
         "./skills/skill-picker",
         "./skills/skill-creator",
-        "./skills/dashboard",
-        "./skills/audit-decisions",
-        "./skills/registry-collector",
+        "./skills/init",
+        "./skills/link",
+        "./skills/record",
         "./skills/remind",
+        "./skills/save-mockup",
+        "./skills/audit-decisions",
+        "./skills/migrate-project",
+        "./skills/rebuild-index",
+        "./skills/dashboard",
+        "./skills/diary",
+        "./skills/registry-collector",
         "./skills/why",
         "./skills/rule",
-        "./skills/diary",
-        "./skills/deeptalk",
-        "./skills/record"
+        "./skills/deeptalk"
       ]
     }
   ]

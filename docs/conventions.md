@@ -2,23 +2,77 @@
 
 > 모든 hamstern 스킬·hook 이 따르는 공통 규약. 신규 스킬 추가 시 이 문서를 먼저 읽고 따른다.
 
-## 1. 표준 저장소 레이아웃
+## 1. 표준 저장소 레이아웃 (Sub-F 이후 — git-as-DB)
 
 ```
-{project_root}/.hamstern/
-  sessions/{session_id}.md   # 세션별 distill (결정 + 실패·폐기 + 열린 질문)  ← record 가 작성
-  decisions.md               # 현재 결정사항 (카테고리별, hot)                ← record 가 append
-  decisions-log.md           # append-only 전체 이력 (cold)                  ← record 가 append
-{project_root}/.claude/rules/{topic}.md (+references/)  # 영구 룰 (자동 로드)
+{HAMSTERN_DATA}/                          # 사용자의 personal hamstern-data repo
+├── projects/
+│   ├── {uuid}/
+│   │   ├── meta.json                     # {uuid, name, repos, created_at, last_active}
+│   │   ├── decisions.md                  # 현재 결정사항 (Sub-C 포맷 유지)
+│   │   ├── decisions-log.md              # append-only 이력
+│   │   ├── sessions/{session_id}.md      # 세션별 distill
+│   │   └── mockups/
+│   │       ├── _index.json               # {filename: {title, description, ...}}
+│   │       └── *.html|*.png|...
+│   └── _index.json                       # {uuid: {name, last_active, counts}}
+└── docs/                                  # gh-pages source
+    ├── index.html                        # 프로젝트 목록 메인
+    ├── p/{uuid}/                         # per-project view
+    └── data/                              # build.py 산출물 (manifest + 각 프로젝트 데이터)
+
+# 디바이스별 캐시 (모든 hamstern 사용 디바이스)
+~/.config/hamstern/
+└── active-project.json                   # {uuid, name, hamstern_data_path, linked_at}
+
+# 프로젝트 자체 repo (변경 없음 — 영구 룰만 보유)
+{project_root}/.claude/rules/{topic}.md (+references/)   # 영구 룰 (자동 로드)
 ```
 
-`{project_root}` = `git rev-parse --show-toplevel` 결과, 실패 시 `pwd`.
+핵심 원칙:
 
-> 옛 3-tier 구조 (`baby-hamster/`, `mom-hamster/`, `boss-hamster/`) 는 Sub-C 에서 제거됨. record 첫 호출 시 자동 마이그레이션 (`.hamstern.bak.{ts}/` 백업 후 새 구조로 mv).
+- **모든 결정·세션·mockup 은 사용자의 personal `hamstern-data` repo 한 곳에 누적**. 프로젝트 자체 repo 는 건드리지 않음 (`.claude/rules/` 제외).
+- **UUID 디렉터리 격리** — 프로젝트 이름이 바뀌어도, 같은 이름 프로젝트가 여럿 있어도 `{uuid}` 가 영구 식별자.
+- **디바이스별 active 캐시** — `~/.config/hamstern/active-project.json` 이 현 세션이 어느 프로젝트인지 결정. 디바이스마다 다를 수 있음 (자연 multi-device).
+- **gh-pages 빌트인** — `hamstern-data/docs/` 가 정적 viewer 의 source. `/hams:dashboard --publish` 가 `docs/data/` 를 채우고 push.
+
+옛 단일 `.hamstern/` 인접 모델 (Sub-A~E) 은 `/hams:migrate-project` 로 hamstern-data 모델로 이전.
+
+> 옛 3-tier 구조 (`baby-hamster/`, `mom-hamster/`, `boss-hamster/`) 는 Sub-C 에서 제거됨. record 첫 호출 시 자동 마이그레이션 (`.hamstern.bak.{ts}/` 백업 후 새 구조로 mv). 이 자동 마이그레이션은 *프로젝트 repo 내 옛 .hamstern/* 한정 — Sub-F 의 hamstern-data 모델로 옮긴 후에는 트리거 안 됨.
 
 ## 2. 경로 해석 의사코드
 
-모든 스킬은 다음 두 함수를 본문 첫 단계에 호출한다:
+### Sub-F 이후 (active-project.json 기반)
+
+모든 capture/read 스킬은 다음 함수를 본문 첫 단계에 호출한다:
+
+```
+resolve_active_project():
+  cfg = read_json("$HOME/.config/hamstern/active-project.json")
+  if cfg is missing:
+    error("no active project. /hams:link \"name\" or /hams:init \"name\" first.")
+  return {
+    uuid:           cfg.uuid,
+    name:           cfg.name,
+    hamstern_data:  cfg.hamstern_data_path,
+    proj_dir:       f"{cfg.hamstern_data_path}/projects/{cfg.uuid}"
+  }
+
+store_paths(active):
+  return {
+    sessions:  {active.proj_dir}/sessions/,
+    decisions: {active.proj_dir}/decisions.md,
+    log:       {active.proj_dir}/decisions-log.md,
+    mockups:   {active.proj_dir}/mockups/,
+    meta:      {active.proj_dir}/meta.json
+  }
+```
+
+쓰기 후엔 `{hamstern_data}` 안에서 `git add ... && git commit && git push` (네트워크 실패 시 local commit 만 + 경고).
+
+### Sub-D/E 호환용 (옛 흐름)
+
+`/hams:migrate-project` 가 아직 안 돌아간 프로젝트나, 옛 SKILL.md 잔재에서 다음을 볼 수 있음:
 
 ```
 resolve_root():
@@ -34,14 +88,9 @@ ensure_store(r):
     return OK
   except (no FS, EACCES, ENOENT, sandbox):
     return FALLBACK_TEXT
-
-store_paths(r):
-  return {
-    sessions:  {r}/.hamstern/sessions/,
-    decisions: {r}/.hamstern/decisions.md,
-    log:       {r}/.hamstern/decisions-log.md
-  }
 ```
+
+신규 스킬은 이 흐름을 새로 채용하지 말 것. 기존 사용자는 `/hams:migrate-project` 로 Sub-F 모델로 이전.
 
 ## 3. 능력 프로브 패턴 (FS-try + Text-fallback)
 
@@ -138,14 +187,19 @@ _마지막 업데이트: {ISO timestamp}_
 
 `/hams:record` 가 쓰는 세션 블럭 (`## YYYY-MM-DD HH:MM · session <id>`) 과는 다른 prefix (`|` separator + 한국어 이벤트명) 로 구분된다. dashboard 의 log timeline viewer (`docs/app.js`) 는 이 두 종류만 인식한다.
 
-## 7. 진입점 단일화 (Sub-C 이후)
+## 7. 진입점 단일화 (Sub-F 이후)
 
 | 진입점 | 역할 |
 |--------|------|
-| `/hams:record` | **유일한 capture 진입점**. sessions/{id}.md + decisions.md + decisions-log.md 에 atomic dual-write. |
-| `/hams:remind` | 읽기 전용. `decisions.md` 를 현재 세션에 환기. |
-| `/hams:audit-decisions` | 읽기 + 갱신. `decisions.md` 와 `sessions/*.md` 를 재검토하고 사용자 승인 시 `decisions.md` 갱신. |
-| `/hams:dashboard` (local 기본) | `.hamstern/*.md` → `.hamstern/dashboard-data/` 번들 + background 서버 + http://localhost:<dynamic_port>/ |
-| `/hams:dashboard --publish` | Sub-D 흐름 보존. `docs/data/` 번들 + commit·push → `https://<owner>.github.io/<repo>/` |
+| `/hams:init` | 새 프로젝트 생성. UUID 부여 + `projects/{uuid}/` scaffolding + active 바인딩 + hamstern-data commit·push. |
+| `/hams:link` | 기존 프로젝트로 active 바인딩 (부분 이름 검색). `~/.config/hamstern/active-project.json` 갱신. |
+| `/hams:record` | **유일한 capture 진입점**. active 프로젝트의 `projects/{uuid}/{sessions/{id}.md, decisions.md, decisions-log.md}` 에 atomic dual-write + hamstern-data commit·push. |
+| `/hams:remind` | 읽기 전용. active 프로젝트의 `decisions.md` 전체 + 최근 N=2 sessions (8KB cap) 환기. `--deep` 으로 N=5, `--mockups` 로 mockup 메타 포함. |
+| `/hams:save-mockup` | active 프로젝트의 `mockups/` 에 HTML/이미지 보존 + `mockups/_index.json` 갱신 + hamstern-data commit·push. |
+| `/hams:audit-decisions` | 읽기 + 갱신. `decisions.md` 와 `sessions/*.md` 를 재검토하고 사용자 승인 시 `decisions.md` 갱신. `remove "<text>" --data-root <...>` 으로 dashboard 핀 제거 흐름. |
+| `/hams:dashboard` (local 기본) | hamstern-data 전체 → 임시 dir 로 multi-project 번들 + background 서버 + http://localhost:<dynamic_port>/. |
+| `/hams:dashboard --publish` | hamstern-data 의 `docs/data/` 로 multi-project 번들 + commit·push → `https://<owner>.github.io/hamstern-data/`. |
+| `/hams:migrate-project` | 1회성. 기존 프로젝트 repo 의 `.hamstern/` → `hamstern-data/projects/{uuid}/` 로 이전 + 원본 보존 (MIGRATED.md). |
+| `/hams:rebuild-index` | 복구용. `projects/_index.json` 을 디렉터리 스캔으로 재생성 + hamstern-data commit·push. |
 
-write 는 record 만, 다른 스킬은 reader 또는 reader+editor. hook 은 Sub-C 에서 제거됨 — 자동 캡쳐 없음.
+write 는 record/save-mockup/init/migrate-project/rebuild-index 만, 다른 스킬은 reader 또는 reader+editor. hook 은 Sub-C 에서 제거됨 — 자동 캡쳐 없음. 모든 write 후엔 hamstern-data 안에서 git commit + push (네트워크 실패 시 local 만).
