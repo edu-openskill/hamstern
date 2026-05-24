@@ -133,3 +133,31 @@ def test_idempotent_two_calls_same_content(tmp_path):
     assert (out / "sessions" / "s.md").read_text(encoding="utf-8") == first_session
     m = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
     assert m["sessions"] == ["s.md"]
+
+
+def test_build_multiproject_writes_each_uuid(tmp_path):
+    """Sub-F: hamstern-data/projects/{uuid}/* → docs/data/p/{uuid}/* 번들."""
+    import json
+    hd = tmp_path / "hamstern-data"
+    (hd / "projects" / "uuid-1").mkdir(parents=True)
+    (hd / "projects" / "uuid-1" / "decisions.md").write_text("# d1\n- a\n", encoding="utf-8")
+    (hd / "projects" / "uuid-2").mkdir(parents=True)
+    (hd / "projects" / "uuid-2" / "decisions.md").write_text("# d2\n- b\n", encoding="utf-8")
+
+    (hd / "projects" / "_index.json").write_text(json.dumps({
+        "uuid-1": {"name": "Proj 1", "last_active": "2026-05-24T00:00:00Z",
+                   "decision_count": 1, "session_count": 0, "mockup_count": 0},
+        "uuid-2": {"name": "Proj 2", "last_active": "2026-05-23T00:00:00Z",
+                   "decision_count": 1, "session_count": 0, "mockup_count": 0}
+    }), encoding="utf-8")
+
+    out = tmp_path / "docs" / "data"
+    build.run_multiproject(hamstern_data=hd, out_dir=out)
+
+    assert (out / "p" / "uuid-1" / "decisions.md").read_text(encoding="utf-8") == "# d1\n- a\n"
+    assert (out / "p" / "uuid-2" / "decisions.md").read_text(encoding="utf-8") == "# d2\n- b\n"
+
+    root_manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
+    assert root_manifest["schema_version"] == 2  # Sub-F bumps
+    assert set(root_manifest["projects"].keys()) == {"uuid-1", "uuid-2"}
+    assert root_manifest["projects"]["uuid-1"]["name"] == "Proj 1"
