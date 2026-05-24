@@ -17,18 +17,9 @@ serve = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(serve)
 
 
-def _make_handler(plugin_dir: Path, data_dir: Path):
-    """HamsHandler 의 class-level 속성을 주입한 서브클래스 반환.
-
-    Note: base class 에도 주입해 self=None 호출 (단위 테스트용) 도 지원.
-    """
-    class _H(serve.HamsHandler):
-        pass
-    _H.plugin_dir = plugin_dir
-    _H.data_dir = data_dir
-    serve.HamsHandler.plugin_dir = plugin_dir
-    serve.HamsHandler.data_dir = data_dir
-    return _H
+def _route(plugin_dir: Path, data_dir: Path, request_path: str) -> Path:
+    """test 헬퍼 — _route_path 의 결과를 Path 로 감싸 반환."""
+    return Path(serve._route_path(request_path, plugin_dir, data_dir))
 
 
 def test_translate_root_returns_plugin_index(tmp_path):
@@ -38,9 +29,7 @@ def test_translate_root_returns_plugin_index(tmp_path):
     data_dir.mkdir()
     (plugin_dir / "index.html").write_text("<html>plugin index</html>", encoding="utf-8")
 
-    H = _make_handler(plugin_dir, data_dir)
-    result = H.translate_path(None, "/")  # type: ignore[arg-type]
-    assert Path(result) == plugin_dir / "index.html"
+    assert _route(plugin_dir, data_dir, "/") == plugin_dir / "index.html"
 
 
 def test_translate_app_js_returns_plugin_app_js(tmp_path):
@@ -49,9 +38,7 @@ def test_translate_app_js_returns_plugin_app_js(tmp_path):
     plugin_dir.mkdir(); data_dir.mkdir()
     (plugin_dir / "app.js").write_text("// app", encoding="utf-8")
 
-    H = _make_handler(plugin_dir, data_dir)
-    result = H.translate_path(None, "/app.js")
-    assert Path(result) == plugin_dir / "app.js"
+    assert _route(plugin_dir, data_dir, "/app.js") == plugin_dir / "app.js"
 
 
 def test_translate_style_css_returns_plugin_style_css(tmp_path):
@@ -60,9 +47,7 @@ def test_translate_style_css_returns_plugin_style_css(tmp_path):
     plugin_dir.mkdir(); data_dir.mkdir()
     (plugin_dir / "style.css").write_text("body{}", encoding="utf-8")
 
-    H = _make_handler(plugin_dir, data_dir)
-    result = H.translate_path(None, "/style.css")
-    assert Path(result) == plugin_dir / "style.css"
+    assert _route(plugin_dir, data_dir, "/style.css") == plugin_dir / "style.css"
 
 
 def test_translate_data_manifest_returns_data_dir(tmp_path):
@@ -71,9 +56,7 @@ def test_translate_data_manifest_returns_data_dir(tmp_path):
     plugin_dir.mkdir(); data_dir.mkdir()
     (data_dir / "manifest.json").write_text("{}", encoding="utf-8")
 
-    H = _make_handler(plugin_dir, data_dir)
-    result = H.translate_path(None, "/data/manifest.json")
-    assert Path(result) == data_dir / "manifest.json"
+    assert _route(plugin_dir, data_dir, "/data/manifest.json") == data_dir / "manifest.json"
 
 
 def test_translate_data_sessions_subpath(tmp_path):
@@ -83,9 +66,7 @@ def test_translate_data_sessions_subpath(tmp_path):
     (data_dir / "sessions").mkdir()
     (data_dir / "sessions" / "foo.md").write_text("# foo", encoding="utf-8")
 
-    H = _make_handler(plugin_dir, data_dir)
-    result = H.translate_path(None, "/data/sessions/foo.md")
-    assert Path(result) == data_dir / "sessions" / "foo.md"
+    assert _route(plugin_dir, data_dir, "/data/sessions/foo.md") == data_dir / "sessions" / "foo.md"
 
 
 def test_translate_blocks_data_traversal(tmp_path):
@@ -95,9 +76,7 @@ def test_translate_blocks_data_traversal(tmp_path):
     secret = tmp_path / "secret.txt"
     secret.write_text("forbidden", encoding="utf-8")
 
-    H = _make_handler(plugin_dir, data_dir)
-    result = H.translate_path(None, "/data/../../secret.txt")
-    resolved = Path(result).resolve()
+    resolved = _route(plugin_dir, data_dir, "/data/../../secret.txt").resolve()
     assert secret.resolve() != resolved, "traversal escaped data_dir to access secret"
 
 
@@ -108,9 +87,7 @@ def test_translate_blocks_root_traversal(tmp_path):
     secret = tmp_path / "secret.txt"
     secret.write_text("forbidden", encoding="utf-8")
 
-    H = _make_handler(plugin_dir, data_dir)
-    result = H.translate_path(None, "/../secret.txt")
-    resolved = Path(result).resolve()
+    resolved = _route(plugin_dir, data_dir, "/../secret.txt").resolve()
     assert secret.resolve() != resolved, "traversal escaped plugin_dir to access secret"
 
 
@@ -136,9 +113,14 @@ def test_e2e_http_server_serves_plugin_and_data(tmp_path):
     (plugin_dir / "app.js").write_text("// app", encoding="utf-8")
     (data_dir / "manifest.json").write_text('{"schema_version":1}', encoding="utf-8")
 
-    H = _make_handler(plugin_dir, data_dir)
+    # 인스턴스화 시 plugin_dir/data_dir 가 필요 — subclass 로 주입
+    class _H(serve.HamsHandler):
+        pass
+    _H.plugin_dir = plugin_dir
+    _H.data_dir = data_dir
+
     port = serve.pick_port()
-    server = HTTPServer(("127.0.0.1", port), H)
+    server = HTTPServer(("127.0.0.1", port), _H)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:

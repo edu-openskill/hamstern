@@ -12,30 +12,33 @@ from http.server import SimpleHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
 
+def _safe_join(base: Path, rel: str) -> str:
+    """base 의 자손인지 검증 후 path 반환. 탈출 시 sentinel (존재하지 않는 path) 반환 → 404."""
+    candidate = (base / rel).resolve()
+    base_resolved = base.resolve()
+    try:
+        candidate.relative_to(base_resolved)
+    except ValueError:
+        return str(base_resolved / "__forbidden__")
+    return str(candidate)
+
+
+def _route_path(path: str, plugin_dir: Path, data_dir: Path) -> str:
+    """순수 함수 — HTTP request path 를 파일시스템 path 로 매핑. test 가 직접 호출."""
+    path = path.split("?", 1)[0].split("#", 1)[0]
+    if path.startswith("/data/"):
+        return _safe_join(data_dir, path[len("/data/"):])
+    if path in ("/", ""):
+        path = "/index.html"
+    return _safe_join(plugin_dir, path.lstrip("/"))
+
+
 class HamsHandler(SimpleHTTPRequestHandler):
     plugin_dir: Path = None
     data_dir: Path = None
 
     def translate_path(self, path: str) -> str:
-        # self=None 호출 (단위 테스트) 과 인스턴스 호출 (HTTPServer) 모두 지원.
-        cls = type(self) if self is not None else HamsHandler
-        path = path.split("?", 1)[0].split("#", 1)[0]
-        if path.startswith("/data/"):
-            return cls._safe_join(cls.data_dir, path[len("/data/"):])
-        if path in ("/", ""):
-            path = "/index.html"
-        return cls._safe_join(cls.plugin_dir, path.lstrip("/"))
-
-    @classmethod
-    def _safe_join(cls, base: Path, rel: str) -> str:
-        """base 의 자손인지 검증 후 path 반환. 탈출 시 sentinel (존재하지 않는 path) 반환 → 404."""
-        candidate = (base / rel).resolve()
-        base_resolved = base.resolve()
-        try:
-            candidate.relative_to(base_resolved)
-        except ValueError:
-            return str(base_resolved / "__forbidden__")
-        return str(candidate)
+        return _route_path(path, self.plugin_dir, self.data_dir)
 
     def log_message(self, fmt, *args):
         pass
