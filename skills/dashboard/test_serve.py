@@ -80,3 +80,29 @@ def test_translate_data_sessions_subpath(tmp_path):
     H = _make_handler(plugin_dir, data_dir)
     result = H.translate_path(None, "/data/sessions/foo.md")
     assert Path(result) == data_dir / "sessions" / "foo.md"
+
+
+def test_translate_blocks_data_traversal(tmp_path):
+    plugin_dir = tmp_path / "plugin_docs"
+    data_dir = tmp_path / "data"
+    plugin_dir.mkdir(); data_dir.mkdir()
+    secret = tmp_path / "secret.txt"
+    secret.write_text("forbidden", encoding="utf-8")
+
+    H = _make_handler(plugin_dir, data_dir)
+    result = H.translate_path(None, "/data/../../secret.txt")
+    resolved = Path(result).resolve()
+    assert secret.resolve() != resolved, "traversal escaped data_dir to access secret"
+
+
+def test_translate_blocks_root_traversal(tmp_path):
+    plugin_dir = tmp_path / "plugin_docs"
+    data_dir = tmp_path / "data"
+    plugin_dir.mkdir(); data_dir.mkdir()
+    secret = tmp_path / "secret.txt"
+    secret.write_text("forbidden", encoding="utf-8")
+
+    H = _make_handler(plugin_dir, data_dir)
+    result = H.translate_path(None, "/../secret.txt")
+    resolved = Path(result).resolve()
+    assert secret.resolve() != resolved, "traversal escaped plugin_dir to access secret"

@@ -21,12 +21,21 @@ class HamsHandler(SimpleHTTPRequestHandler):
         cls = type(self) if self is not None else HamsHandler
         path = path.split("?", 1)[0].split("#", 1)[0]
         if path.startswith("/data/"):
-            rel = path[len("/data/"):]
-            return str(cls.data_dir / rel)
+            return cls._safe_join(cls.data_dir, path[len("/data/"):])
         if path in ("/", ""):
             path = "/index.html"
-        rel = path.lstrip("/")
-        return str(cls.plugin_dir / rel)
+        return cls._safe_join(cls.plugin_dir, path.lstrip("/"))
+
+    @classmethod
+    def _safe_join(cls, base: Path, rel: str) -> str:
+        """base 의 자손인지 검증 후 path 반환. 탈출 시 sentinel (존재하지 않는 path) 반환 → 404."""
+        candidate = (base / rel).resolve()
+        base_resolved = base.resolve()
+        try:
+            candidate.relative_to(base_resolved)
+        except ValueError:
+            return str(base_resolved / "__forbidden__")
+        return str(candidate)
 
     def log_message(self, fmt, *args):
         pass
