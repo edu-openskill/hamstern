@@ -144,11 +144,57 @@ nav.tabs button.active { background: #1a1a2e; color: white; border-color: #1a1a2
 }
 .toast.hidden { opacity: 0; pointer-events: none; }
 
+.project-card {
+  display: block;
+  padding: 16px 20px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.1s;
+}
+.project-card:hover { background: #f5f5f9; }
+.project-name { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+.project-meta { font-size: 12px; color: #666; }
+.project-last { font-size: 11px; color: #aaa; font-family: ui-monospace, monospace; margin-top: 4px; }
+
+.search-input {
+  padding: 6px 12px;
+  border: 1px solid #888;
+  border-radius: 4px;
+  font-size: 13px;
+  width: 200px;
+  margin-right: 12px;
+}
+
+.main-list {
+  padding: 24px;
+  background: white;
+  display: block;
+  overflow-y: auto;
+}
+
+.mockup-item {
+  display: block;
+  padding: 10px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  margin-bottom: 6px;
+  text-decoration: none;
+  color: inherit;
+}
+.mockup-item:hover { background: #f9f9f9; }
+.mockup-title { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+.mockup-meta { font-size: 11px; color: #888; }
+
+.col-mockups { width: 240px; flex-shrink: 0; }
+
 @media (max-width: 768px) {
   nav.tabs { display: flex; padding: 8px; background: white; border-bottom: 1px solid #ddd; gap: 4px; }
   nav.tabs button { flex: 1; }
   .main { flex-direction: column; }
   .col { width: 100% !important; display: none; }
   .col.active { display: block; }
-  .col-sessions, .col-log { border-top: 1px solid #ddd; }
+  .col-sessions, .col-log, .col-mockups { border-top: 1px solid #ddd; }
 }

@@ -51,7 +51,7 @@ async function onSessionClick(e) {
   const render = document.getElementById('session-render');
   render.innerHTML = '<em>loading…</em>';
   try {
-    const md = await fetchText(`${DATA_PATH}/sessions/${file}`);
+    const md = await fetchText(`${window._currentDataPath || DATA_PATH}/sessions/${file}`);
     render.innerHTML = DOMPurify.sanitize(marked.parse(md));
   } catch (err) {
     render.innerHTML = `<div class="empty">파일 로드 실패: ${file}</div>`;
@@ -128,20 +128,23 @@ async function copyToClipboard(text) {
   }
 }
 
-document.getElementById('decisions-list').addEventListener('click', async (e) => {
-  const del = e.target.closest('.del');
-  if (!del) return;
-  const text = del.dataset.text;
-  if (!text) return;
-  const cmd = `/hams:audit-decisions remove "${escapeForSlashCommand(text)}"`;
-  const ok = await copyToClipboard(cmd);
-  if (ok) {
-    showToast('복사됨 — Claude 세션에 붙여넣어 실행');
-  } else {
-    showToast('복사 실패 — 콘솔에서 복사하세요');
-    console.log('COPY THIS:', cmd);
-  }
-});
+const _decisionsListEl = document.getElementById('decisions-list');
+if (_decisionsListEl) {
+  _decisionsListEl.addEventListener('click', async (e) => {
+    const del = e.target.closest('.del');
+    if (!del) return;
+    const text = del.dataset.text;
+    if (!text) return;
+    const cmd = `/hams:audit-decisions remove "${escapeForSlashCommand(text)}"`;
+    const ok = await copyToClipboard(cmd);
+    if (ok) {
+      showToast('복사됨 — Claude 세션에 붙여넣어 실행');
+    } else {
+      showToast('복사 실패 — 콘솔에서 복사하세요');
+      console.log('COPY THIS:', cmd);
+    }
+  });
+}
 
 function parseDecisions(md) {
   // returns [{category, body, raw}] in document order
@@ -192,32 +195,131 @@ function renderDecisions(md) {
   el.innerHTML = html;
 }
 
+async function renderMockupsList(mockupFilenames, uuid, dataPath) {
+  const el = document.getElementById('mockups-list');
+  if (!el) return; // page doesn't have mockups column (e.g., index.html)
+  if (!mockupFilenames || mockupFilenames.length === 0) {
+    renderEmpty(el, '목업 없음');
+    return;
+  }
+
+  let metaIdx = {};
+  try {
+    metaIdx = await fetchJSON(`${dataPath}/mockups/_index.json`);
+  } catch {}
+
+  let html = '';
+  for (const fname of mockupFilenames) {
+    const meta = metaIdx[fname] || {};
+    const title = meta.title || fname;
+    const url = `${dataPath}/mockups/${fname}`;
+    html += `<a href="${url}" target="_blank" class="mockup-item">
+      <div class="mockup-title">${DOMPurify.sanitize(title)}</div>
+      <div class="mockup-meta">${DOMPurify.sanitize(meta.description || fname)}</div>
+    </a>`;
+  }
+  el.innerHTML = html;
+}
+
 async function load() {
+  const path = window.location.pathname;
+
+  // Sub-F: /p/{uuid}/... → per-project view
+  const projectMatch = path.match(/\/p\/([^/]+)\//);
+  if (projectMatch) {
+    await loadProject(projectMatch[1]);
+    return;
+  }
+
+  // Default: project list (index.html)
+  await loadProjectList();
+}
+
+
+async function loadProjectList() {
+  let rootManifest;
+  try {
+    rootManifest = await fetchJSON(`data/manifest.json`);
+  } catch (e) {
+    const el = document.getElementById('projects-list');
+    if (el) renderEmpty(el,
+      'hamstern-data 가 아직 publish 안 됨.<br>'
+      + 'Claude 세션에서 <code>/hams:dashboard --publish</code> 호출 후 재방문.');
+    return;
+  }
+  setGenerated(rootManifest.generated_at);
+
+  const projects = Object.entries(rootManifest.projects || {})
+    .sort((a, b) => (b[1].last_active || '').localeCompare(a[1].last_active || ''));
+
+  const el = document.getElementById('projects-list');
+  if (!el) return;
+
+  if (projects.length === 0) {
+    renderEmpty(el, '프로젝트 없음. <code>/hams:init "이름"</code> 으로 첫 프로젝트 생성.');
+    return;
+  }
+
+  el.innerHTML = projects.map(([uuid, info]) => `
+    <a href="p/${encodeURIComponent(uuid)}/" class="project-card">
+      <div class="project-name">${DOMPurify.sanitize(info.name)}</div>
+      <div class="project-meta">
+        decisions: ${info.decision_count} · sessions: ${info.session_count} · mockups: ${info.mockup_count}
+      </div>
+      <div class="project-last">last: ${info.last_active || '—'}</div>
+    </a>
+  `).join('');
+
+  // Search filter
+  const searchInput = document.getElementById('search');
+  if (searchInput) {
+    searchInput.addEventListener('input', () => {
+      const q = searchInput.value.toLowerCase();
+      document.querySelectorAll('.project-card').forEach(card => {
+        const visible = card.textContent.toLowerCase().includes(q);
+        card.style.display = visible ? '' : 'none';
+      });
+    });
+  }
+}
+
+
+async function loadProject(uuid) {
+  // Per-project view uses data path relative to docs/p/{uuid}/index.html
+  const dataPath = `../../data/p/${encodeURIComponent(uuid)}`;
+  window._currentDataPath = dataPath;
+
   let manifest;
   try {
-    manifest = await fetchJSON(`${DATA_PATH}/manifest.json`);
+    manifest = await fetchJSON(`${dataPath}/manifest.json`);
   } catch (e) {
-    renderEmpty(document.getElementById('decisions-list'),
-      'Dashboard 데이터 미생성.<br>Claude 세션에서 <code>/hams:dashboard</code> 호출 후 재방문.');
+    const el = document.getElementById('decisions-list');
+    if (el) renderEmpty(el,
+      'Dashboard 데이터 미생성.<br>Claude 세션에서 <code>/hams:dashboard --publish</code> 호출 후 재방문.');
     return;
   }
   setGenerated(manifest.generated_at);
 
   if (manifest.decisions) {
-    const md = await fetchText(`${DATA_PATH}/decisions.md`);
+    const md = await fetchText(`${dataPath}/decisions.md`);
     renderDecisions(md);
   } else {
-    renderEmpty(document.getElementById('decisions-list'), '결정사항 없음');
+    const el = document.getElementById('decisions-list');
+    if (el) renderEmpty(el, '결정사항 없음');
   }
 
   renderSessionsList(manifest.sessions || []);
 
   if (manifest.decisions_log) {
-    const logMd = await fetchText(`${DATA_PATH}/decisions-log.md`);
+    const logMd = await fetchText(`${dataPath}/decisions-log.md`);
     renderLog(logMd);
   } else {
-    renderEmpty(document.getElementById('log-list'), '로그 없음');
+    const el = document.getElementById('log-list');
+    if (el) renderEmpty(el, '로그 없음');
   }
+
+  // Sub-F: mockups column
+  await renderMockupsList(manifest.mockups || [], uuid, dataPath);
 }
 
 function activateTab(name) {
@@ -229,12 +331,14 @@ function activateTab(name) {
   });
 }
 
-document.getElementById('tabs').addEventListener('click', (e) => {
-  if (e.target.tagName === 'BUTTON' && e.target.dataset.tab) {
-    activateTab(e.target.dataset.tab);
-  }
-});
-
-activateTab('decisions');
+const _tabsEl = document.getElementById('tabs');
+if (_tabsEl) {
+  _tabsEl.addEventListener('click', (e) => {
+    if (e.target.tagName === 'BUTTON' && e.target.dataset.tab) {
+      activateTab(e.target.dataset.tab);
+    }
+  });
+  activateTab('decisions');
+}
 
 load();
