@@ -81,9 +81,26 @@ def main():
     parser.add_argument("text", help="결정 본문 (앞의 '- ' 와 trailing session 마커 제외)")
     parser.add_argument("--project", default=".", help="프로젝트 루트 (Sub-D/E 호환용)")
     parser.add_argument("--data-root", help="hamstern-data 의 project 디렉터리 (Sub-F)")
+    parser.add_argument("--project-uuid", help="Sub-F: hamstern-data 의 project UUID (active-project.json 에서 hamstern_data_path 자동 resolve)")
     args = parser.parse_args()
 
-    if args.data_root:
+    if args.project_uuid:
+        import os, json
+        active_config = os.path.expanduser("~/.config/hamstern/active-project.json")
+        if not os.path.exists(active_config):
+            print("error: ~/.config/hamstern/active-project.json 없음. /hams:link 또는 /hams:init 먼저.", file=sys.stderr)
+            sys.exit(1)
+        cfg = json.load(open(active_config, encoding="utf-8"))
+        hamstern_data = cfg.get("hamstern_data_path")
+        if not hamstern_data:
+            print("error: active-project.json 에 hamstern_data_path 없음.", file=sys.stderr)
+            sys.exit(1)
+        base_dir = Path(hamstern_data) / "projects" / args.project_uuid
+        if not base_dir.is_dir():
+            print(f"error: project 디렉터리 없음: {base_dir}", file=sys.stderr)
+            sys.exit(1)
+        result = run(base_dir=base_dir, text=args.text)
+    elif args.data_root:
         result = run(base_dir=Path(args.data_root).resolve(), text=args.text)
     else:
         result = run(project_root=Path(args.project).resolve(), text=args.text)

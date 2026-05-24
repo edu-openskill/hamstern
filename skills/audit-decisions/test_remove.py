@@ -91,3 +91,41 @@ def test_run_with_base_dir_arg(tmp_path):
     assert result.removed is True
     new = (base / "decisions.md").read_text(encoding="utf-8")
     assert "- foo" not in new
+
+
+def test_main_project_uuid_resolves_via_active_config(tmp_path, monkeypatch, capsys):
+    """Sub-F: --project-uuid 가 active-project.json 의 hamstern_data_path 와 합쳐져 base_dir 가 됨."""
+    import json
+    import sys
+
+    # 가짜 home dir
+    fake_home = tmp_path / "home"
+    fake_home.mkdir()
+    config_dir = fake_home / ".config" / "hamstern"
+    config_dir.mkdir(parents=True)
+
+    hamstern_data = tmp_path / "hamstern-data"
+    proj_dir = hamstern_data / "projects" / "test-uuid"
+    proj_dir.mkdir(parents=True)
+    (proj_dir / "decisions.md").write_text("# d\n\n## A\n- foo\n", encoding="utf-8")
+
+    (config_dir / "active-project.json").write_text(json.dumps({
+        "uuid": "test-uuid",
+        "name": "Test",
+        "hamstern_data_path": str(hamstern_data),
+        "linked_at": "2026-05-24T00:00:00Z"
+    }), encoding="utf-8")
+
+    monkeypatch.setattr("os.path.expanduser", lambda p: str(fake_home / p[2:]) if p.startswith("~/") else p)
+    monkeypatch.setattr(sys, "argv", ["remove.py", "foo", "--project-uuid", "test-uuid"])
+
+    try:
+        removemod.main()
+    except SystemExit as e:
+        assert e.code is None or e.code == 0, f"main exited non-zero: {e.code}"
+
+    new = (proj_dir / "decisions.md").read_text(encoding="utf-8")
+    assert "- foo" not in new
+
+    captured = capsys.readouterr()
+    assert "removed:" in captured.out

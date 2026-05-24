@@ -46,19 +46,12 @@ python3 skills/audit-decisions/remove.py "<text>" --project .
 
 ### Sub-F 이후 사용 (hamstern-data 경로)
 
-dashboard 의 [×] 클릭이 클립보드에 복사하는 명령에 `--data-root` 자동 포함:
-
-```
-/hams:audit-decisions remove "<text>" --data-root "$HAMSTERN_DATA/projects/$UUID"
-```
-
-또는 active-project.json 기반 자동 결정 (Claude 가 SKILL.md 의 다음 패턴 사용):
-
 ```bash
-ACTIVE_CONFIG="$HOME/.config/hamstern/active-project.json"
-HAMSTERN_DATA=$(python3 -c "import json; print(json.load(open(r'$ACTIVE_CONFIG'))['hamstern_data_path'])")
-UUID=$(python3 -c "import json; print(json.load(open(r'$ACTIVE_CONFIG'))['uuid'])")
-python3 skills/audit-decisions/remove.py "<text>" --data-root "$HAMSTERN_DATA/projects/$UUID"
+# 권장 (dashboard 의 [×] 클릭이 발행하는 형식)
+python3 skills/audit-decisions/remove.py "<text>" --project-uuid <UUID>
+
+# 또는 base_dir 직접 지정
+python3 skills/audit-decisions/remove.py "<text>" --data-root "$HAMSTERN_DATA/projects/<UUID>"
 ```
 
 이후 hamstern-data 에서 git commit + push (record/save-mockup 와 동일 패턴).

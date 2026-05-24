@@ -187,8 +187,11 @@ fi
 
 5. **URL 오픈** (git remote 에서 owner/repo 동적 추출)
    ```bash
-   OWNER=$(cd "$HAMSTERN_DATA" && git remote get-url origin | sed -E 's|.*[:/]([^/]+)/.+|\1|')
-   REPO=$(cd "$HAMSTERN_DATA" && git remote get-url origin | sed -E 's|.*/([^/]+)\.git$|\1|' | sed -E 's|.*/([^/]+)$|\1|')
+   # SSH (`git@host:owner/repo.git`) 와 HTTPS (`https://host/owner/repo[.git]`) 양쪽 지원.
+   # 주의: `|` 가 alternation 으로 쓰이므로 sed delimiter 는 `#` 사용.
+   ORIGIN_URL=$(cd "$HAMSTERN_DATA" && git remote get-url origin)
+   OWNER=$(echo "$ORIGIN_URL" | sed -E 's#^(https?://[^/]+/|git@[^:]+:)([^/]+)/.*#\2#')
+   REPO=$(echo "$ORIGIN_URL" | sed -E -e 's#/$##' -e 's#\.git$##' -e 's#.*/##')
    URL="https://$OWNER.github.io/$REPO/"
 
    case "$(uname -s)" in
@@ -217,7 +220,7 @@ repo (`hamstern-data`) 의 Settings → Pages → Source: `Deploy from a branch`
 
 ## 편집 흐름
 
-dashboard 는 read-only. `[×]` 클릭 → 클립보드 `/hams:audit-decisions remove "<text>" --data-root "$HAMSTERN_DATA/projects/$ACTIVE_UUID"` → Claude 세션에 붙여넣어 실행 → 다음 `/hams:dashboard` 호출 시 viewer 반영.
+dashboard 는 read-only. `[×]` 클릭 → 클립보드 `/hams:audit-decisions remove "<text>" --project-uuid <UUID>` → Claude 세션에 붙여넣어 실행 → remove.py 가 active-project.json 으로 hamstern-data 경로 자동 resolve.
 
 ## `.gitignore` 추천 (사용자의 `hamstern-data` repo 에서)
 

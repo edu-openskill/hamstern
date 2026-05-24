@@ -135,7 +135,10 @@ if (_decisionsListEl) {
     if (!del) return;
     const text = del.dataset.text;
     if (!text) return;
-    const cmd = `/hams:audit-decisions remove "${escapeForSlashCommand(text)}"`;
+    const uuid = window._currentUuid;
+    const cmd = uuid
+      ? `/hams:audit-decisions remove "${escapeForSlashCommand(text)}" --project-uuid ${uuid}`
+      : `/hams:audit-decisions remove "${escapeForSlashCommand(text)}"`;  // fallback (single-project legacy view)
     const ok = await copyToClipboard(cmd);
     if (ok) {
       showToast('복사됨 — Claude 세션에 붙여넣어 실행');
@@ -287,6 +290,7 @@ async function loadProjectList() {
 async function loadProject(uuid) {
   // Per-project view uses data path relative to docs/p/{uuid}/index.html
   const dataPath = `../../data/p/${encodeURIComponent(uuid)}`;
+  window._currentUuid = uuid;
   window._currentDataPath = dataPath;
 
   let manifest;

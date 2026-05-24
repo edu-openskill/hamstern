@@ -165,8 +165,12 @@ git commit -m "save-mockup: $TITLE"
 git push origin main 2>&1 || echo "⚠️ push failed (offline?). local commit 됨. 다음 호출 시 재시도." >&2
 cd - > /dev/null
 
-OWNER=$(cd "$HAMSTERN_DATA" && git remote get-url origin | sed -E 's|.*[:/]([^/]+)/.+|\1|')
-URL="https://$OWNER.github.io/hamstern-data/p/$ACTIVE_UUID/mockups/$FNAME"
+# SSH (`git@host:owner/repo.git`) 와 HTTPS (`https://host/owner/repo[.git]`) 양쪽 지원.
+# 주의: `|` 가 alternation 으로 쓰이므로 sed delimiter 는 `#` 사용.
+ORIGIN_URL=$(cd "$HAMSTERN_DATA" && git remote get-url origin)
+OWNER=$(echo "$ORIGIN_URL" | sed -E 's#^(https?://[^/]+/|git@[^:]+:)([^/]+)/.*#\2#')
+REPO=$(echo "$ORIGIN_URL" | sed -E -e 's#/$##' -e 's#\.git$##' -e 's#.*/##')
+URL="https://$OWNER.github.io/$REPO/p/$ACTIVE_UUID/mockups/$FNAME"
 
 echo "✅ 저장됨"
 echo "   제목:   $TITLE"
