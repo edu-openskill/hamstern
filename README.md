@@ -1,3 +1,14 @@
+## 플러그인 설치 / 재설치 / 삭제
+
+```bash
+/plugin uninstall hams@hamstern
+/plugin marketplace remove hamstern
+/plugin marketplace add edu-openskill/hamstern
+/plugin install hams@hamstern
+```
+
+---
+
 # hamstern — Claude Code 용 personal AI memory system
 
 Claude Code 의 모든 세션에서 나온 결정사항·세션 distill·HTML mockup 을 사용자 개인의 GitHub repo 하나(`hamstern-data`)에 UUID 격리로 누적 저장하고, 어느 디바이스에서든 dashboard 로 조회하고 필요할 때 환기하는 시스템.
