@@ -3,6 +3,7 @@
 serve.py 는 plugin 정적 자산 + project 데이터 디렉터리를 path 분기로 동시 serve.
 """
 import importlib.util
+import socket
 from pathlib import Path
 
 _HERE = Path(__file__).parent
@@ -106,3 +107,17 @@ def test_translate_blocks_root_traversal(tmp_path):
     result = H.translate_path(None, "/../secret.txt")
     resolved = Path(result).resolve()
     assert secret.resolve() != resolved, "traversal escaped plugin_dir to access secret"
+
+
+def test_pick_port_returns_valid_bindable_port():
+    p1 = serve.pick_port()
+    p2 = serve.pick_port()
+    assert 1024 <= p1 <= 65535
+    assert 1024 <= p2 <= 65535
+    assert isinstance(p1, int) and isinstance(p2, int)
+
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        s.bind(("127.0.0.1", p1))
+    finally:
+        s.close()

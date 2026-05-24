@@ -39,3 +39,10 @@ class HamsHandler(SimpleHTTPRequestHandler):
 
     def log_message(self, fmt, *args):
         pass
+
+
+def pick_port() -> int:
+    """OS 가 할당한 자유 포트 (ephemeral range)."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(("127.0.0.1", 0))
+        return s.getsockname()[1]
