@@ -46,3 +46,37 @@ def pick_port() -> int:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind(("127.0.0.1", 0))
         return s.getsockname()[1]
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="hamstern dashboard local server")
+    parser.add_argument("--plugin-dir", required=True, help="docs/ 자산이 있는 plugin 디렉터리")
+    parser.add_argument("--data-dir", required=True, help="build.py 가 만든 .hamstern/dashboard-data/")
+    parser.add_argument("--port", type=int, default=0, help="0 = OS 동적 할당")
+    args = parser.parse_args()
+
+    HamsHandler.plugin_dir = Path(args.plugin_dir).resolve()
+    HamsHandler.data_dir = Path(args.data_dir).resolve()
+
+    if not HamsHandler.plugin_dir.is_dir():
+        print(f"plugin-dir not found: {HamsHandler.plugin_dir}", file=sys.stderr)
+        sys.exit(1)
+
+    HamsHandler.data_dir.mkdir(parents=True, exist_ok=True)
+
+    port = args.port if args.port else pick_port()
+    try:
+        server = HTTPServer(("127.0.0.1", port), HamsHandler)
+    except OSError as e:
+        print(f"failed to bind port {port}: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    print(f"http://localhost:{port}/", flush=True)
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        pass
+
+
+if __name__ == "__main__":
+    main()
