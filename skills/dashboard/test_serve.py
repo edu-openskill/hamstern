@@ -57,3 +57,26 @@ def test_translate_style_css_returns_plugin_style_css(tmp_path):
     H = _make_handler(plugin_dir, data_dir)
     result = H.translate_path(None, "/style.css")
     assert Path(result) == plugin_dir / "style.css"
+
+
+def test_translate_data_manifest_returns_data_dir(tmp_path):
+    plugin_dir = tmp_path / "plugin_docs"
+    data_dir = tmp_path / "data"
+    plugin_dir.mkdir(); data_dir.mkdir()
+    (data_dir / "manifest.json").write_text("{}", encoding="utf-8")
+
+    H = _make_handler(plugin_dir, data_dir)
+    result = H.translate_path(None, "/data/manifest.json")
+    assert Path(result) == data_dir / "manifest.json"
+
+
+def test_translate_data_sessions_subpath(tmp_path):
+    plugin_dir = tmp_path / "plugin_docs"
+    data_dir = tmp_path / "data"
+    plugin_dir.mkdir(); data_dir.mkdir()
+    (data_dir / "sessions").mkdir()
+    (data_dir / "sessions" / "foo.md").write_text("# foo", encoding="utf-8")
+
+    H = _make_handler(plugin_dir, data_dir)
+    result = H.translate_path(None, "/data/sessions/foo.md")
+    assert Path(result) == data_dir / "sessions" / "foo.md"

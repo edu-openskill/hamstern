@@ -20,6 +20,9 @@ class HamsHandler(SimpleHTTPRequestHandler):
         # self=None 호출 (단위 테스트) 과 인스턴스 호출 (HTTPServer) 모두 지원.
         cls = type(self) if self is not None else HamsHandler
         path = path.split("?", 1)[0].split("#", 1)[0]
+        if path.startswith("/data/"):
+            rel = path[len("/data/"):]
+            return str(cls.data_dir / rel)
         if path in ("/", ""):
             path = "/index.html"
         rel = path.lstrip("/")
