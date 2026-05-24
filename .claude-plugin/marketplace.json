@@ -21,8 +21,6 @@
         "./skills/remind",
         "./skills/save-mockup",
         "./skills/audit-decisions",
-        "./skills/migrate-project",
-        "./skills/rebuild-index",
         "./skills/dashboard",
         "./skills/diary",
         "./skills/registry-collector",

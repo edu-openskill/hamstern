@@ -46,8 +46,6 @@ Claude 와 한 대화의 결과물은 휘발성이다. `/clear` 한 번이면 �
 | `/hams:remind` | 결정사항 + 최근 세션 환기 (기본 N=2, 8KB cap; `--deep` N=5; `--mockups`) |
 | `/hams:save-mockup` | HTML/이미지 mockup 을 hamstern-data 에 cross-session 보존 |
 | `/hams:dashboard` | local serve 기본, `--publish` 로 gh-pages multi-project dashboard |
-| `/hams:migrate-project` | 기존 `.hamstern/` → hamstern-data 이전 (1회성) |
-| `/hams:rebuild-index` | `projects/_index.json` 재생성 (desync 복구) |
 | `/hams:audit-decisions` | 결정사항 타당성 재검토 (또는 dashboard `[×]` 의 클립보드 명령 흐름) |
 | `/hams:why` | 현상의 근본 원인 추론 — 재발 시 영구 룰로 격상 |
 | `/hams:rule` | 프로젝트 영구 룰 관리 (add/list/edit/remove/promote) — `.claude/rules/` |
@@ -138,25 +136,6 @@ dashboard 의 결정 옆 `[×]` 클릭 → 클립보드에 다음이 복사됨:
 ```
 
 `~/.config/hamstern/active-project.json` 갱신. 디바이스별 캐시 → multi-device 가 각자 다른 active 가능.
-
-### 8. 마이그레이션 — `/hams:migrate-project`
-
-Sub-F 이전 (옛 단일 `.hamstern/` 구조) 프로젝트를 hamstern-data 로 1회성 이전.
-
-```bash
-cd <옛 프로젝트>
-/hams:migrate-project "프로젝트 이름"
-#  → UUID 발급 + .hamstern/* → hamstern-data/projects/{uuid}/* 이동
-#  → 옛 .hamstern → .hamstern.bak.{ts}/ 백업
-```
-
-### 9. 복구 — `/hams:rebuild-index`
-
-`projects/_index.json` 이 desync 되면 (수동 편집 등) 디렉터리 스캔으로 재생성.
-
-```bash
-/hams:rebuild-index   # hamstern-data/projects/* 전체 스캔 → _index.json 재작성
-```
 
 ---
 
@@ -294,7 +273,7 @@ hamstern-data/  (사용자 personal GitHub repo, private)
 - **Sub-C** (2026-05-23) — `/hams:record` 신설, hooks 전부 제거, 3-tier → 2-tier 평탄화
 - **Sub-D** (2026-05-23) — Dashboard static gh-pages + 브라우저 편집 UI (`[×]` 클립보드 흐름)
 - **Sub-E** (2026-05-23) — Dashboard local serve 기본, dynamic port + path traversal 차단
-- **Sub-project F** (2026-05-24) — **hamstern-data repo + UUID per project (git-as-DB)** — 핵심 비전 실현. 5 신규 skill (`init`/`link`/`save-mockup`/`migrate-project`/`rebuild-index`) + multi-project dashboard
+- **Sub-project F** (2026-05-24) — **hamstern-data repo + UUID per project (git-as-DB)** — 핵심 비전 실현. 신규 skill (`init`/`link`/`save-mockup`) + multi-project dashboard
 
 ---
 

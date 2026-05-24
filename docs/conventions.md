@@ -36,7 +36,7 @@
 - **디바이스별 active 캐시** — `~/.config/hamstern/active-project.json` 이 현 세션이 어느 프로젝트인지 결정. 디바이스마다 다를 수 있음 (자연 multi-device).
 - **gh-pages 빌트인** — `hamstern-data/docs/` 가 정적 viewer 의 source. `/hams:dashboard --publish` 가 `docs/data/` 를 채우고 push.
 
-옛 단일 `.hamstern/` 인접 모델 (Sub-A~E) 은 `/hams:migrate-project` 로 hamstern-data 모델로 이전.
+옛 단일 `.hamstern/` 인접 모델 (Sub-A~E) 은 수동으로 hamstern-data 모델로 이전 (`/hams:init` 으로 새 UUID 발급 후 옛 `.hamstern/` 내용을 `hamstern-data/projects/{uuid}/` 로 복사).
 
 > 옛 3-tier 구조 (`baby-hamster/`, `mom-hamster/`, `boss-hamster/`) 는 Sub-C 에서 제거됨. record 첫 호출 시 자동 마이그레이션 (`.hamstern.bak.{ts}/` 백업 후 새 구조로 mv). 이 자동 마이그레이션은 *프로젝트 repo 내 옛 .hamstern/* 한정 — Sub-F 의 hamstern-data 모델로 옮긴 후에는 트리거 안 됨.
 
@@ -72,7 +72,7 @@ store_paths(active):
 
 ### Sub-D/E 호환용 (옛 흐름)
 
-`/hams:migrate-project` 가 아직 안 돌아간 프로젝트나, 옛 SKILL.md 잔재에서 다음을 볼 수 있음:
+옛 단일 `.hamstern/` 모델에서 아직 hamstern-data 로 옮기지 않은 프로젝트나, 옛 SKILL.md 잔재에서 다음을 볼 수 있음:
 
 ```
 resolve_root():
@@ -90,7 +90,7 @@ ensure_store(r):
     return FALLBACK_TEXT
 ```
 
-신규 스킬은 이 흐름을 새로 채용하지 말 것. 기존 사용자는 `/hams:migrate-project` 로 Sub-F 모델로 이전.
+신규 스킬은 이 흐름을 새로 채용하지 말 것. 기존 사용자는 수동으로 Sub-F 모델로 이전.
 
 ## 3. 능력 프로브 패턴 (FS-try + Text-fallback)
 
@@ -199,7 +199,5 @@ _마지막 업데이트: {ISO timestamp}_
 | `/hams:audit-decisions` | 읽기 + 갱신. `decisions.md` 와 `sessions/*.md` 를 재검토하고 사용자 승인 시 `decisions.md` 갱신. `remove "<text>" --data-root <...>` 으로 dashboard 핀 제거 흐름. |
 | `/hams:dashboard` (local 기본) | hamstern-data 전체 → 임시 dir 로 multi-project 번들 + background 서버 + http://localhost:<dynamic_port>/. |
 | `/hams:dashboard --publish` | hamstern-data 의 `docs/data/` 로 multi-project 번들 + commit·push → `https://<owner>.github.io/hamstern-data/`. |
-| `/hams:migrate-project` | 1회성. 기존 프로젝트 repo 의 `.hamstern/` → `hamstern-data/projects/{uuid}/` 로 이전 + 원본 보존 (MIGRATED.md). |
-| `/hams:rebuild-index` | 복구용. `projects/_index.json` 을 디렉터리 스캔으로 재생성 + hamstern-data commit·push. |
 
-write 는 record/save-mockup/init/migrate-project/rebuild-index 만, 다른 스킬은 reader 또는 reader+editor. hook 은 Sub-C 에서 제거됨 — 자동 캡쳐 없음. 모든 write 후엔 hamstern-data 안에서 git commit + push (네트워크 실패 시 local 만).
+write 는 record/save-mockup/init 만, 다른 스킬은 reader 또는 reader+editor. hook 은 Sub-C 에서 제거됨 — 자동 캡쳐 없음. 모든 write 후엔 hamstern-data 안에서 git commit + push (네트워크 실패 시 local 만).

@@ -44,7 +44,7 @@ HAMSTERN_DATA=$(python3 -c "import json; print(json.load(open(r'$ACTIVE_CONFIG')
 PROJ_DIR="$HAMSTERN_DATA/projects/$ACTIVE_UUID"
 
 [ ! -d "$PROJ_DIR" ] && {
-  echo "active UUID $ACTIVE_UUID 의 디렉터리가 없습니다. /hams:rebuild-index 또는 /hams:link 다시." >&2
+  echo "active UUID $ACTIVE_UUID 의 디렉터리가 없습니다. /hams:link 로 다시 연결." >&2
   exit 1
 }
 mkdir -p "$PROJ_DIR/sessions"
@@ -57,7 +57,7 @@ echo "resolved active project: $ACTIVE_UUID → $PROJ_DIR"
 
 옛 구조 (`baby-hamster/`, `mom-hamster/`, `boss-hamster/`) 가 *프로젝트 repo 내 `.hamstern/`* 에 존재하면 자동 이전:
 
-> **Sub-F 이후**: 이 자동 마이그레이션은 *프로젝트 repo 내 .hamstern/* 의 옛 구조 한정. 이미 hamstern-data 로 이전된 사용자는 트리거 안 됨. 옛 `.hamstern/` 가 있는 프로젝트는 `/hams:migrate-project` 로 hamstern-data 로 이전.
+> **Sub-F 이후**: 이 자동 마이그레이션은 *프로젝트 repo 내 .hamstern/* 의 옛 구조(baby/mom/boss) 한정. 이미 hamstern-data 로 이전된 사용자는 트리거 안 됨.
 
 ```bash
 ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || ROOT=$(pwd)
@@ -84,7 +84,7 @@ if [ "$NEEDS_MIGRATE" = "1" ]; then
     mv "$ROOT/.hamstern/boss-hamster/decisions-log.md" "$ROOT/.hamstern/decisions-log.md"
   fi
   rm -rf "$ROOT/.hamstern/mom-hamster" "$ROOT/.hamstern/boss-hamster" 2>/dev/null
-  echo "마이그레이션 완료. 옛 데이터는 $BACKUP 에 보존. /hams:migrate-project 로 hamstern-data 이전 권장."
+  echo "마이그레이션 완료. 옛 데이터는 $BACKUP 에 보존."
 fi
 ```
 

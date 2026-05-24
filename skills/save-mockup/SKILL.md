@@ -37,7 +37,7 @@ HAMSTERN_DATA=$(python3 -c "import json; print(json.load(open(r'$ACTIVE_CONFIG')
 PROJ_DIR="$HAMSTERN_DATA/projects/$ACTIVE_UUID"
 
 [ ! -d "$PROJ_DIR" ] && {
-  echo "active UUID $ACTIVE_UUID 디렉터리 없음. /hams:rebuild-index 또는 /hams:link 다시." >&2
+  echo "active UUID $ACTIVE_UUID 디렉터리 없음. /hams:link 로 다시 연결." >&2
   exit 1
 }
 
