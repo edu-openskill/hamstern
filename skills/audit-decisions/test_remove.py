@@ -78,3 +78,16 @@ def test_log_appended_on_successful_remove(tmp_path):
     log = (tmp_path / ".hamstern" / "decisions-log.md").read_text(encoding="utf-8")
     assert "핀 제거" in log
     assert "**결정:** foo" in log
+
+
+def test_run_with_base_dir_arg(tmp_path):
+    """Sub-F: base_dir 직접 지정 (hamstern-data/projects/{uuid}/)."""
+    base = tmp_path / "uuid-abc"
+    base.mkdir()
+    (base / "decisions.md").write_text("# d\n\n## A\n- foo\n", encoding="utf-8")
+
+    result = removemod.run(base_dir=base, text="foo")
+
+    assert result.removed is True
+    new = (base / "decisions.md").read_text(encoding="utf-8")
+    assert "- foo" not in new

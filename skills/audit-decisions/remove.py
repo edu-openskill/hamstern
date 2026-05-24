@@ -28,10 +28,19 @@ def _strip_marker(body: str) -> str:
     return SESSION_MARKER_RE.sub("", body).rstrip()
 
 
-def run(project_root: Path, text: str) -> RemoveResult:
-    project_root = Path(project_root)
-    decisions_file = project_root / ".hamstern" / "decisions.md"
-    log_file = project_root / ".hamstern" / "decisions-log.md"
+def run(project_root: Path = None, text: str = "", base_dir: Path = None) -> RemoveResult:
+    """
+    Sub-F: base_dir 직접 지정 (hamstern-data/projects/{uuid}/) 우선.
+    Sub-D/E: project_root 지정 → project_root/.hamstern/decisions.md.
+    """
+    if base_dir is None:
+        if project_root is None:
+            return RemoveResult(removed=False, reason="either project_root or base_dir required")
+        base_dir = Path(project_root) / ".hamstern"
+
+    base_dir = Path(base_dir)
+    decisions_file = base_dir / "decisions.md"
+    log_file = base_dir / "decisions-log.md"
 
     if not decisions_file.is_file():
         return RemoveResult(removed=False, reason=f"decisions.md not found at {decisions_file}")
@@ -70,9 +79,15 @@ def run(project_root: Path, text: str) -> RemoveResult:
 def main():
     parser = argparse.ArgumentParser(description="Remove a decision by exact body match")
     parser.add_argument("text", help="결정 본문 (앞의 '- ' 와 trailing session 마커 제외)")
-    parser.add_argument("--project", default=".", help="프로젝트 루트")
+    parser.add_argument("--project", default=".", help="프로젝트 루트 (Sub-D/E 호환용)")
+    parser.add_argument("--data-root", help="hamstern-data 의 project 디렉터리 (Sub-F)")
     args = parser.parse_args()
-    result = run(project_root=Path(args.project).resolve(), text=args.text)
+
+    if args.data_root:
+        result = run(base_dir=Path(args.data_root).resolve(), text=args.text)
+    else:
+        result = run(project_root=Path(args.project).resolve(), text=args.text)
+
     if not result.removed:
         print(f"error: {result.reason}", file=sys.stderr)
         sys.exit(1)
