@@ -35,3 +35,25 @@ def test_translate_root_returns_plugin_index(tmp_path):
     H = _make_handler(plugin_dir, data_dir)
     result = H.translate_path(None, "/")  # type: ignore[arg-type]
     assert Path(result) == plugin_dir / "index.html"
+
+
+def test_translate_app_js_returns_plugin_app_js(tmp_path):
+    plugin_dir = tmp_path / "plugin_docs"
+    data_dir = tmp_path / "data"
+    plugin_dir.mkdir(); data_dir.mkdir()
+    (plugin_dir / "app.js").write_text("// app", encoding="utf-8")
+
+    H = _make_handler(plugin_dir, data_dir)
+    result = H.translate_path(None, "/app.js")
+    assert Path(result) == plugin_dir / "app.js"
+
+
+def test_translate_style_css_returns_plugin_style_css(tmp_path):
+    plugin_dir = tmp_path / "plugin_docs"
+    data_dir = tmp_path / "data"
+    plugin_dir.mkdir(); data_dir.mkdir()
+    (plugin_dir / "style.css").write_text("body{}", encoding="utf-8")
+
+    H = _make_handler(plugin_dir, data_dir)
+    result = H.translate_path(None, "/style.css")
+    assert Path(result) == plugin_dir / "style.css"
