@@ -142,3 +142,26 @@ def test_e2e_http_server_serves_plugin_and_data(tmp_path):
         server.shutdown()
         server.server_close()
         thread.join(timeout=2)
+
+
+def test_route_multiproject_p_uuid_routes_to_project_dir(tmp_path):
+    """Sub-F: /data/p/{uuid}/decisions.md → data_dir/p/{uuid}/decisions.md."""
+    plugin_dir = tmp_path / "plugin_docs"
+    data_dir = tmp_path / "data"
+    plugin_dir.mkdir(); data_dir.mkdir()
+    (data_dir / "p" / "uuid-1").mkdir(parents=True)
+    (data_dir / "p" / "uuid-1" / "decisions.md").write_text("# proj 1", encoding="utf-8")
+
+    result = _route(plugin_dir, data_dir, "/data/p/uuid-1/decisions.md")
+    assert result == data_dir / "p" / "uuid-1" / "decisions.md"
+
+
+def test_route_root_manifest_at_data_root(tmp_path):
+    """Sub-F: /data/manifest.json (root, multi-project)."""
+    plugin_dir = tmp_path / "plugin_docs"
+    data_dir = tmp_path / "data"
+    plugin_dir.mkdir(); data_dir.mkdir()
+    (data_dir / "manifest.json").write_text('{"projects":{}}', encoding="utf-8")
+
+    result = _route(plugin_dir, data_dir, "/data/manifest.json")
+    assert result == data_dir / "manifest.json"
