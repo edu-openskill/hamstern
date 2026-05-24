@@ -31,20 +31,36 @@ allowed-tools:
 
 ## Claude 실행 절차
 
-### Step 1 — 경로 해석 + 자동 마이그레이션 + 저장소 보장
+### Step 1 — active project 해석 + 자동 마이그레이션 (옛 구조) + 저장소 보장
+
+```bash
+ACTIVE_CONFIG="$HOME/.config/hamstern/active-project.json"
+[ ! -f "$ACTIVE_CONFIG" ] && {
+  echo "active project 없음. 먼저 /hams:link \"name\" 또는 /hams:init \"name\" 호출하세요." >&2
+  exit 1
+}
+ACTIVE_UUID=$(python3 -c "import json; print(json.load(open(r'$ACTIVE_CONFIG'))['uuid'])")
+HAMSTERN_DATA=$(python3 -c "import json; print(json.load(open(r'$ACTIVE_CONFIG'))['hamstern_data_path'])")
+PROJ_DIR="$HAMSTERN_DATA/projects/$ACTIVE_UUID"
+
+[ ! -d "$PROJ_DIR" ] && {
+  echo "active UUID $ACTIVE_UUID 의 디렉터리가 없습니다. /hams:rebuild-index 또는 /hams:link 다시." >&2
+  exit 1
+}
+mkdir -p "$PROJ_DIR/sessions"
+echo "resolved active project: $ACTIVE_UUID → $PROJ_DIR"
+```
+
+사용자에게 resolved active project 를 echo 해서 잘못된 경우 즉시 abort 가능하게 한다.
+
+#### 자동 마이그레이션 (옛 baby/mom/boss → 평탄 구조, idempotent, 안전 백업)
+
+옛 구조 (`baby-hamster/`, `mom-hamster/`, `boss-hamster/`) 가 *프로젝트 repo 내 `.hamstern/`* 에 존재하면 자동 이전:
+
+> **Sub-F 이후**: 이 자동 마이그레이션은 *프로젝트 repo 내 .hamstern/* 의 옛 구조 한정. 이미 hamstern-data 로 이전된 사용자는 트리거 안 됨. 옛 `.hamstern/` 가 있는 프로젝트는 `/hams:migrate-project` 로 hamstern-data 로 이전.
 
 ```bash
 ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || ROOT=$(pwd)
-echo "resolved root: $ROOT"
-```
-
-사용자에게 resolved root 를 echo 해서 잘못된 경우 즉시 abort 가능하게 한다.
-
-#### 자동 마이그레이션 (idempotent, 안전 백업)
-
-옛 구조 (`baby-hamster/`, `mom-hamster/`, `boss-hamster/`) 가 존재하면 첫 record 호출 시 자동 이전:
-
-```bash
 NEEDS_MIGRATE=0
 for d in baby-hamster mom-hamster boss-hamster; do
   [ -d "$ROOT/.hamstern/$d" ] && NEEDS_MIGRATE=1
@@ -68,7 +84,7 @@ if [ "$NEEDS_MIGRATE" = "1" ]; then
     mv "$ROOT/.hamstern/boss-hamster/decisions-log.md" "$ROOT/.hamstern/decisions-log.md"
   fi
   rm -rf "$ROOT/.hamstern/mom-hamster" "$ROOT/.hamstern/boss-hamster" 2>/dev/null
-  echo "마이그레이션 완료. 옛 데이터는 $BACKUP 에 보존."
+  echo "마이그레이션 완료. 옛 데이터는 $BACKUP 에 보존. /hams:migrate-project 로 hamstern-data 이전 권장."
 fi
 ```
 
@@ -77,10 +93,10 @@ fi
 #### 저장소 보장
 
 ```bash
-mkdir -p "$ROOT/.hamstern/sessions" 2>/dev/null
+mkdir -p "$PROJ_DIR/sessions" 2>/dev/null
 ```
 
-`mkdir` 가 실패하면 (sandbox, EACCES 등) → **Step 5 (텍스트 폴백)** 으로.
+`mkdir` 가 실패하면 (sandbox, EACCES 등) → **Step 7 (텍스트 폴백)** 으로.
 성공하면 → Step 2 로.
 
 ### Step 2 — Distill (현재 세션 컨텍스트에서 추출)
@@ -118,9 +134,9 @@ drop 할 번호를 쉼표로 답하세요 (없으면 enter):
 
 ### Step 4 — 원자적 이중 쓰기 (sessions/{id}.md + decisions.md)
 
-한 번 record 호출 = 두 파일에 동시 쓰기. 둘은 sequential 이지만 다음 호출이 idempotent 라 부분 실패도 자동 복구.
+한 번 record 호출 = 두 파일에 동시 쓰기. 모든 경로는 `$PROJ_DIR = $HAMSTERN_DATA/projects/$ACTIVE_UUID` 기준. 둘은 sequential 이지만 다음 호출이 idempotent 라 부분 실패도 자동 복구.
 
-#### (a) `sessions/{session_id}.md` — full distill 저장
+#### (a) `$PROJ_DIR/sessions/{session_id}.md` — full distill 저장
 
 기존 파일이 있고 같은 session_id 면 in-place 갱신 (replace), 없으면 새로 생성. 포맷:
 
@@ -142,7 +158,7 @@ _기록: {ISO timestamp}_
 
 빈 카테고리는 헤더만 남기거나 헤더도 생략 가능 (양쪽 다 acceptable, 일관성만 유지).
 
-#### (b) `decisions.md` — 결정 부분만 카테고리별 append
+#### (b) `$PROJ_DIR/decisions.md` — 결정 부분만 카테고리별 append
 
 각 채택된 결정 후보에 대해:
 
@@ -152,9 +168,9 @@ _기록: {ISO timestamp}_
 
 쓰기 시 `_마지막 업데이트: ...` 라인을 현재 ISO timestamp 로 갱신.
 
-실패·폐기와 열린 질문은 decisions.md 에는 쓰지 않는다 (sessions/{id}.md 에만 보존). decisions.md 는 "현재 유효한 결정의 집합" 만 보유.
+실패·폐기와 열린 질문은 `$PROJ_DIR/decisions.md` 에는 쓰지 않는다 (`$PROJ_DIR/sessions/{id}.md` 에만 보존). decisions.md 는 "현재 유효한 결정의 집합" 만 보유.
 
-#### (c) `decisions-log.md` — append-only 이력
+#### (c) `$PROJ_DIR/decisions-log.md` — append-only 이력
 
 ```markdown
 ## {YYYY-MM-DD HH:MM} · session {id}
@@ -163,13 +179,48 @@ _기록: {ISO timestamp}_
 + [열림] decisions.md hot 영역 상한 결정 방식
 ```
 
-`decisions-log.md` 가 없으면 첫 줄에 `# Decisions Log\n<!-- append-only. 수동 편집 금지. -->\n` 추가 후 블록 append.
+`$PROJ_DIR/decisions-log.md` 가 없으면 첫 줄에 `# Decisions Log\n<!-- append-only. 수동 편집 금지. -->\n` 추가 후 블록 append.
 
-### Step 5 — 텍스트 폴백 (FS 쓰기 차단 시)
+### Step 5 — `_index.json` 갱신
+
+쓰기 완료 후 `$HAMSTERN_DATA/projects/_index.json` 의 active 프로젝트 항목을 갱신:
+
+```bash
+INDEX_FILE="$HAMSTERN_DATA/projects/_index.json"
+ISO=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+python3 -c "
+import json, os
+idx = json.load(open(r'$INDEX_FILE'))
+proj = idx.get('$ACTIVE_UUID', {})
+dec_file = r'$PROJ_DIR/decisions.md'
+sess_dir = r'$PROJ_DIR/sessions'
+dec_count = sum(1 for line in open(dec_file) if line.startswith('- ')) if os.path.exists(dec_file) else 0
+sess_count = len([f for f in os.listdir(sess_dir) if f.endswith('.md')]) if os.path.isdir(sess_dir) else 0
+proj['decision_count'] = dec_count
+proj['session_count'] = sess_count
+proj['last_active'] = '$ISO'
+idx['$ACTIVE_UUID'] = proj
+json.dump(idx, open(r'$INDEX_FILE', 'w', encoding='utf-8'), ensure_ascii=False, indent=2)
+"
+```
+
+### Step 6 — hamstern-data git commit + push
+
+```bash
+cd "$HAMSTERN_DATA"
+git add "projects/$ACTIVE_UUID/" projects/_index.json
+git commit -m "record: 세션 distill ${ISO}"
+git push origin main 2>&1 || echo "⚠️ push failed (offline?). local commit 됨." >&2
+cd - > /dev/null
+```
+
+push 실패는 치명적이지 않다 (local commit 은 보존됨). 다음 record 호출이 누적 push 한다.
+
+### Step 7 — 텍스트 폴백 (FS 쓰기 차단 시)
 
 ```
 ⚠️ 파일 시스템 쓰기 불가 환경입니다 (예: Claude Desktop sandbox).
-아래 마크다운을 CLI 세션에서 {project_root}/.hamstern/ 에 직접 병합하세요.
+아래 마크다운을 CLI 세션에서 hamstern-data/projects/$ACTIVE_UUID/ 에 직접 병합하세요.
 
 === sessions/{session_id}.md (전체 교체) ===
 # Session {session_id}
@@ -195,7 +246,7 @@ _기록: {ISO timestamp}_
 + [열림] ...
 ```
 
-세 블록 모두 포맷 동일 → 사용자가 복붙하면 CLI 의 record 호출과 같은 저장소로 수렴.
+세 블록 모두 포맷 동일 → 사용자가 복붙하면 CLI 의 record 호출과 같은 저장소 (`hamstern-data/projects/$ACTIVE_UUID/`) 로 수렴.
 
 ## 사용 예시
 
@@ -209,7 +260,9 @@ _기록: {ISO timestamp}_
 
 ## 다른 진입점과의 관계
 
-- **`/hams:record` 가 hamstern 의 단일 capture 진입점**. hook (이전 CLI 자동 캡쳐) 은 Sub-C 에서 제거됨. start/stop 라이프사이클도 없음 — record 첫 호출 시 `.hamstern/sessions/` 가 자동 생성됨.
+- **`/hams:record` 가 hamstern 의 단일 capture 진입점**. hook (이전 CLI 자동 캡쳐) 은 Sub-C 에서 제거됨. start/stop 라이프사이클도 없음 — record 첫 호출 시 `$PROJ_DIR/sessions/` 가 자동 생성됨.
 - **/hams:remind** 는 record 가 쓴 `decisions.md` 를 그대로 환기 — 포맷 호환성이 핵심.
 - **/hams:audit-decisions** 는 record 가 쓴 `decisions.md` 와 `sessions/*.md` 를 재검토.
 - **/hams:dashboard** 는 read + 편집 (toggle/remove) — record 가 쓴 데이터 위에서 작동. Sub-D 가 github.io static + 브라우저 편집 UI 로 재설계 예정.
+- Sub-F 이후 record 의 출력은 사용자의 personal hamstern-data repo. 프로젝트 자체 repo 는 건드리지 않음.
+- /hams:init / /hams:link 가 record 의 active project 를 결정.
