@@ -1,6 +1,6 @@
 """hamstern /hams:dashboard 의 local serve 모드.
 
-plugin 정적 자산 (docs/{index,app,style}) + project 데이터 (.hamstern/dashboard-data/) 를
+plugin 정적 자산 (docs/{index,app,style}) + project 데이터 (Sub-D/E: .hamstern/dashboard-data/ 또는 Sub-F: hamstern-data/projects/{uuid}/) 를
 path 분기로 동시 serve. 동적 포트 (OS 할당). Stdlib only.
 """
 from __future__ import annotations
@@ -54,7 +54,7 @@ def pick_port() -> int:
 def main() -> None:
     parser = argparse.ArgumentParser(description="hamstern dashboard local server")
     parser.add_argument("--plugin-dir", required=True, help="docs/ 자산이 있는 plugin 디렉터리")
-    parser.add_argument("--data-dir", required=True, help="build.py 가 만든 .hamstern/dashboard-data/")
+    parser.add_argument("--data-dir", required=True, help="build.py 가 만든 데이터 디렉터리 (Sub-D/E: .hamstern/dashboard-data, Sub-F: hamstern-data 의 docs/data 또는 임시 dir)")
     parser.add_argument("--port", type=int, default=0, help="0 = OS 동적 할당")
     args = parser.parse_args()
 

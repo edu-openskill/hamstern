@@ -1,6 +1,9 @@
 """Layer 2 regression for /hams:dashboard build step.
 
-build.py 는 .hamstern/*.md 를 docs/data/ 로 번들 + manifest.json 생성.
+build.py 는 source 디렉터리의 *.md 를 out_dir 로 번들 + manifest.json 생성.
+- run_single_project(src_dir, out_dir): Sub-F 의 per-project + Sub-D/E run() wrapper 의 코어
+- run_multiproject(hamstern_data, out_dir): Sub-F 의 multi-project (hamstern-data/projects/*)
+- run(project_root, out_dir): Sub-D/E 호환 wrapper — project_root/.hamstern/ → out_dir
 """
 import json
 from pathlib import Path

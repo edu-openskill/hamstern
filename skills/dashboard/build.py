@@ -1,9 +1,9 @@
 """Bundle hamstern data into docs/data/ for the static gh-pages viewer.
 
-Stdlib only — pathlib, json, shutil, argparse, datetime.
+Sub-D/E (single-project, backward compat): project/.hamstern/*.md → docs/data/*
+Sub-F (multi-project): hamstern-data/projects/*/{decisions,sessions,mockups} → docs/data/p/{uuid}/*
 
-Sub-D/E: single-project (.hamstern/*.md → docs/data/*).
-Sub-F: multi-project (hamstern-data/projects/{uuid}/* → docs/data/p/{uuid}/*).
+Stdlib only — pathlib, json, shutil, argparse, datetime.
 """
 import argparse
 import json
