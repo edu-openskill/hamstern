@@ -144,8 +144,8 @@ python3 skills/audit-decisions/remove.py "<text>" --data-root "$HAMSTERN_DATA/pr
 
 ### 입력 데이터
 
-1. `{project}/.hamstern/decisions.md` — 현재 확정 결정사항
-2. `{project}/.hamstern/sessions/*.md` — 세션별 distill (결정/실패/열린질문)
+1. `$HAMSTERN_DATA/projects/$ACTIVE_UUID/decisions.md` — 현재 active 프로젝트의 결정사항 (active-project.json 에서 자동 resolve)
+2. `$HAMSTERN_DATA/projects/$ACTIVE_UUID/sessions/*.md` — 세션별 distill
 
 ### 분석 엔진
 
@@ -157,7 +157,7 @@ python3 skills/audit-decisions/remove.py "<text>" --data-root "$HAMSTERN_DATA/pr
 변경 사항:
 
 ```
-{project}/.hamstern/
+$HAMSTERN_DATA/projects/$ACTIVE_UUID/
 └─ decisions.md (재생성)
 ```
 

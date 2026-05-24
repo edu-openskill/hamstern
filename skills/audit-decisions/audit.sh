@@ -4,9 +4,16 @@ set -euo pipefail
 # Audit Decisions 스킬
 # 프로젝트의 확정된 결정사항들을 재검토하고 타당성을 검증합니다.
 
-PROJECT_DIR="${1:-.}"
-DECISIONS_FILE="$PROJECT_DIR/.hamstern/decisions.md"
-SESSIONS_DIR="$PROJECT_DIR/.hamstern/sessions"
+ACTIVE_CONFIG="$HOME/.config/hamstern/active-project.json"
+if [ ! -f "$ACTIVE_CONFIG" ]; then
+  echo "❌ Error: ~/.config/hamstern/active-project.json 없음. /hams:link 또는 /hams:init 먼저 호출하세요." >&2
+  exit 1
+fi
+ACTIVE_UUID=$(python3 -c "import json; print(json.load(open(r'$ACTIVE_CONFIG'))['uuid'])")
+HAMSTERN_DATA=$(python3 -c "import json; print(json.load(open(r'$ACTIVE_CONFIG'))['hamstern_data_path'])")
+PROJECT_DIR="$HAMSTERN_DATA/projects/$ACTIVE_UUID"
+DECISIONS_FILE="$PROJECT_DIR/decisions.md"
+SESSIONS_DIR="$PROJECT_DIR/sessions"
 
 if [[ ! -f "$DECISIONS_FILE" ]]; then
   echo "❌ Error: decisions.md not found at $DECISIONS_FILE"
