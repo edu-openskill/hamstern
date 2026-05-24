@@ -6,7 +6,7 @@ Claude Code 세션의 결정사항을 자동 추적하고, 웹 대시보드로 �
 
 | 명령 | 동작 |
 |---|---|
-| `/hams:dashboard` | `.hamstern` 스냅샷을 정적 gh-pages 로 publish + viewer 오픈 |
+| `/hams:dashboard` | 로컬 dashboard serve (모든 프로젝트 동작). `--publish` 시 gh-pages |
 | `/hams:record` | 단일 capture 진입점 — 세션을 sessions/{id}.md 저장 + 결정사항 decisions.md 누적 |
 | `/hams:remind` | 결정사항(`decisions.md`) 을 현재 세션에 환기 — 자동 주입 없음, 필요할 때만 |
 | `/hams:diary` | 로컬 `.md` / `.html` → GitHub Pages 블로그 게시 (멀티-프로파일, 검색 기본 ON, 댓글은 `/hams:diary giscus` 셋업 후) |
@@ -388,6 +388,16 @@ DB·서버 추가 없이 두 가지가 기본 ON 으로 동작한다. 검색은 
 - `skills/audit-decisions` 에 `remove "<text>"` 직접 args 형식 추가 (`remove.py` + 5 pytest 케이스).
 - repo 이전: `getinthere-private-job/hamstern-plugin` → `edu-openskill/hamstern`.
 - GitHub Pages 활성화는 1회성 manual step (Settings → Pages → Source: main /docs).
+
+### Sub-project E — Dashboard per-project local serve (2026-05-23)
+
+- `/hams:dashboard` 기본 동작을 **로컬 serve** 로 전환 — 모든 프로젝트에서 외부 의존 0 으로 즉시 동작.
+- `skills/dashboard/serve.py` 신규 (≤ 80 줄 stdlib) — plugin 정적 자산 (`$PLUGIN/docs/`) + project 데이터 (`{project}/.hamstern/dashboard-data/`) 를 path 분기로 동시 serve.
+- 동적 포트 (OS 할당) + background server + PID 추적 → 멀티-프로젝트 dashboard 동시 동작, 포트 충돌 0.
+- Path traversal 차단 (`_safe_join` + sentinel path → 404).
+- `/hams:dashboard --publish` = Sub-D 의 gh-pages 흐름 보존.
+- SKILL.md 의 plugin 경로 탐지: `~/.claude/plugins/cache/hamstern/hams/*/` glob 으로 가장 최근 mtime 선택 (env var `$CLAUDE_PLUGIN_ROOT` 미신뢰).
+- 9 pytest 케이스 (translate_path 5 + traversal 2 + pick_port 1 + e2e HTTPServer 1).
 
 ### 2026-05-23 — 멀티 플랫폼 핸드오프 (`/hams:record` 신설)
 

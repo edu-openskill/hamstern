@@ -145,6 +145,7 @@ _마지막 업데이트: {ISO timestamp}_
 | `/hams:record` | **유일한 capture 진입점**. sessions/{id}.md + decisions.md + decisions-log.md 에 atomic dual-write. |
 | `/hams:remind` | 읽기 전용. `decisions.md` 를 현재 세션에 환기. |
 | `/hams:audit-decisions` | 읽기 + 갱신. `decisions.md` 와 `sessions/*.md` 를 재검토하고 사용자 승인 시 `decisions.md` 갱신. |
-| `/hams:dashboard` | `.hamstern/*.md` 를 `docs/data/` 로 번들 + commit·push 후 `https://edu-openskill.github.io/hamstern/` 정적 viewer 오픈. read-only viewer; `[×]` 클릭 → 클립보드 `/hams:audit-decisions remove "<text>"`. |
+| `/hams:dashboard` (local 기본) | `.hamstern/*.md` → `.hamstern/dashboard-data/` 번들 + background 서버 + http://localhost:<dynamic_port>/ |
+| `/hams:dashboard --publish` | Sub-D 흐름 보존. `docs/data/` 번들 + commit·push → `https://<owner>.github.io/<repo>/` |
 
 write 는 record 만, 다른 스킬은 reader 또는 reader+editor. hook 은 Sub-C 에서 제거됨 — 자동 캡쳐 없음.
