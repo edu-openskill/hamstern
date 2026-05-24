@@ -392,7 +392,7 @@ DB·서버 추가 없이 두 가지가 기본 ON 으로 동작한다. 검색은 
 ### Sub-project E — Dashboard per-project local serve (2026-05-23)
 
 - `/hams:dashboard` 기본 동작을 **로컬 serve** 로 전환 — 모든 프로젝트에서 외부 의존 0 으로 즉시 동작.
-- `skills/dashboard/serve.py` 신규 (≤ 80 줄 stdlib) — plugin 정적 자산 (`$PLUGIN/docs/`) + project 데이터 (`{project}/.hamstern/dashboard-data/`) 를 path 분기로 동시 serve.
+- `skills/dashboard/serve.py` 신규 (≤ 100 줄 stdlib) — plugin 정적 자산 (`$PLUGIN/docs/`) + project 데이터 (`{project}/.hamstern/dashboard-data/`) 를 path 분기로 동시 serve.
 - 동적 포트 (OS 할당) + background server + PID 추적 → 멀티-프로젝트 dashboard 동시 동작, 포트 충돌 0.
 - Path traversal 차단 (`_safe_join` + sentinel path → 404).
 - `/hams:dashboard --publish` = Sub-D 의 gh-pages 흐름 보존.

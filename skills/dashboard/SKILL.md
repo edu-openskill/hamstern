@@ -14,6 +14,8 @@ description: hamstern dashboard 실행. 기본 = 로컬 serve (모든 프로젝�
 
 ## 동작 (Claude 가 실행)
 
+> **Note**: 아래 모든 shell snippet 은 Bash 문법 (`[ -f`, `kill -0`, `head -1`, backgrounding 등). Windows 에서는 git-bash / WSL 또는 Claude 가 Bash tool 로 실행. raw PowerShell 직접 실행은 작동 안 함.
+
 ### 공통 — plugin 경로 탐지
 
 ```
@@ -63,10 +65,18 @@ if [ -z "$PLUGIN_DIR" ]; then echo "hamstern plugin not installed under ~/.claud
    fi
    ```
 
-5. **브라우저 오픈 (플랫폼별)**
-   - Windows: `start "$URL"`
-   - macOS: `open "$URL"`
-   - Linux: `xdg-open "$URL"`
+5. **브라우저 오픈 (플랫폼별, fallback 포함)**
+   ```
+   case "$(uname -s)" in
+     MINGW*|MSYS*|CYGWIN*) start "$URL" ;;
+     Darwin) open "$URL" ;;
+     Linux)
+       if command -v xdg-open >/dev/null; then xdg-open "$URL"
+       else echo "no browser command found — open manually: $URL"
+       fi ;;
+     *) echo "platform unknown — open manually: $URL" ;;
+   esac
+   ```
 
 6. **사용자에게 보고**
    ```
