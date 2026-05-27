@@ -1,0 +1,8 @@
+{
+  "name": "hams",
+  "version": "1.1.0",
+  "description": "hamstern 프로젝트 관리 플러그인 (Tier 1-4 회의록, 결정사항, 스킬 추천)",
+  "author": {
+    "name": "getinthere"
+  }
+}
