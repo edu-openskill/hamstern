@@ -1,6 +1,6 @@
 ---
 name: skill-creator
-description: Use when the user just successfully completed a complex multi-step workflow (deploy/build/CI 설정/외부 서비스 연동/migration/fastlane/Play Store 업로드 등) — especially after 2-3 failed attempts — and wants it captured for reuse. Trigger phrases: "이걸 스킬로 만들어줘", "다음에도 쓰게 저장해", "또 설명하기 싫다", "save as skill", "make this reusable".
+description: 성공한 복잡한 멀티스텝 워크플로(deploy/build/CI/외부 서비스 연동/migration 등)를 재사용 가능한 스킬로 코드화.
 allowed-tools:
   - Read
   - Write

@@ -1,6 +1,6 @@
 ---
 name: rule
-description: Use when the user wants to register, view, edit, remove, or promote a project rule that should be permanently applied — covers explicit rule capture from current conversation context (add), listing existing rules (list), editing (edit), removal (remove), and manual promotion of provisional why-rules (promote). Trigger phrases - "/hams:rule", "이걸 룰로 만들어줘", "이 패턴 영구 적용", "룰 목록", "룰 수정", "이 원칙 격상".
+description: 영구 적용할 프로젝트 룰 관리 — 등록(add)·조회(list)·수정(edit)·삭제(remove)·잠정 why-룰 격상(promote).
 allowed-tools:
   - Read
   - Write
