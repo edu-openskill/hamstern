@@ -2,6 +2,7 @@
 name: init
 description: |
   새 hamstern 프로젝트 생성. UUID 부여 + hamstern-data/projects/{uuid}/ 디렉터리 scaffolding + active 바인딩.
+  GitHub remote 연결 필수 (cross-device sync 보장). 프로젝트 콘텐츠와 분리된 별도 위치 강제.
   사용법:
     /hams:init "프로젝트 이름" [--repo URL] [--description "..."]
 allowed-tools:
@@ -15,7 +16,10 @@ allowed-tools:
 
 새 hamstern 프로젝트를 생성하고 현재 세션을 그 프로젝트로 바인딩.
 
-자세한 데이터 스키마·포맷·경로 규약은 [`docs/conventions.md`](../../docs/conventions.md) 참조.
+**필수 원칙 (2026-05-30 패치):**
+
+1. **hamstern-data는 프로젝트 콘텐츠와 분리된 별도 위치**여야 한다. 기본 경로 `~/.claude/hamstern-data`. 프로젝트 작업물(CLAUDE.md, src/, package.json 등)이 있는 디렉토리를 hamstern-data로 지정하면 거부한다.
+2. **GitHub remote 연결이 필수.** 로컬-only init은 차단된다. cross-device(다른 컴퓨터에서의 remind/link)가 불가능해지기 때문. URL은 `--repo` 인자 또는 AskUserQuestion으로 받고, 없으면 init 중단.
 
 ## Claude 실행 절차
 
@@ -38,19 +42,64 @@ fi
 
 active-project.json 이 없으면 (= 첫 셋업) 기본 경로 `$HOME/.claude/hamstern-data` 제안. AskUserQuestion 으로 사용자 확정.
 
-### Step 2: hamstern-data 디렉터리 존재 확인 / clone
+**경로 안전 검증 (필수):** 사용자가 지정한 HAMSTERN_DATA가 프로젝트 디렉토리와 섞이지 않도록 검증한다. 프로젝트 시그널 파일이 발견되고 hamstern-data 마커(`projects/` 디렉토리)가 없으면 거부.
 
 ```bash
-if [ ! -d "$HAMSTERN_DATA/.git" ]; then
-  # 사용자에게 GitHub repo URL 받기
-  # AskUserQuestion: "hamstern-data repo URL 을 알려주세요 (예: https://github.com/me/hamstern-data.git)"
-  HAMSTERN_REPO_URL="<사용자 입력>"
-  git clone "$HAMSTERN_REPO_URL" "$HAMSTERN_DATA" || {
-    echo "clone 실패. repo 가 비어있다면 빈 디렉터리 + git init 으로 진행하시겠습니까?" >&2
-    # AskUserQuestion: "빈 hamstern-data 로 시작" / "취소"
-  }
+# 프로젝트 디렉토리 신호 (있으면 별도 hamstern-data 위치 필요)
+HAS_PROJECT_MARKER=0
+for marker in "CLAUDE.md" "package.json" "pyproject.toml" "Cargo.toml" "go.mod" "src" "lib" "README.md"; do
+  [ -e "$HAMSTERN_DATA/$marker" ] && HAS_PROJECT_MARKER=1 && break
+done
+HAS_HAMSTERN_MARKER=0
+[ -d "$HAMSTERN_DATA/projects" ] && HAS_HAMSTERN_MARKER=1
+
+if [ "$HAS_PROJECT_MARKER" = "1" ] && [ "$HAS_HAMSTERN_MARKER" = "0" ]; then
+  echo "❌ '$HAMSTERN_DATA'는 프로젝트 디렉토리로 보입니다 (CLAUDE.md/src/README 등 발견)." >&2
+  echo "hamstern-data는 metadata 전용 별도 위치여야 합니다." >&2
+  echo "권장: $HOME/.claude/hamstern-data" >&2
+  exit 1
 fi
 ```
+
+### Step 2: hamstern-data 디렉터리 + GitHub remote 연결 (필수)
+
+```bash
+# --repo 인자 우선
+HAMSTERN_REPO_URL="${REPO_FROM_ARG:-}"
+
+if [ ! -d "$HAMSTERN_DATA/.git" ]; then
+  # GitHub repo URL 강제 (cross-device sync 보장)
+  if [ -z "$HAMSTERN_REPO_URL" ]; then
+    # AskUserQuestion: "hamstern-data GitHub repo URL? (없으면 먼저 github.com/new에서 빈 private repo 생성)"
+    HAMSTERN_REPO_URL="<사용자 입력>"
+  fi
+  [ -z "$HAMSTERN_REPO_URL" ] && {
+    echo "❌ GitHub repo URL이 필요합니다. 로컬-only는 지원 안 함 (cross-device 동기화 보장)." >&2
+    exit 1
+  }
+
+  # clone 시도, 빈 repo면 init+remote 폴백
+  if ! git clone "$HAMSTERN_REPO_URL" "$HAMSTERN_DATA" 2>/dev/null; then
+    mkdir -p "$HAMSTERN_DATA"
+    (cd "$HAMSTERN_DATA" && git init -b main && git remote add origin "$HAMSTERN_REPO_URL")
+    echo "ℹ️ 빈 repo에 init + remote 연결됨"
+  fi
+elif ! (cd "$HAMSTERN_DATA" && git remote get-url origin > /dev/null 2>&1); then
+  # .git은 있지만 remote 없음 — remote 추가 강제
+  echo "⚠️ hamstern-data에 GitHub remote가 없습니다. cross-device 사용을 위해 추가합니다." >&2
+  if [ -z "$HAMSTERN_REPO_URL" ]; then
+    # AskUserQuestion: "GitHub repo URL?"
+    HAMSTERN_REPO_URL="<사용자 입력>"
+  fi
+  [ -z "$HAMSTERN_REPO_URL" ] && {
+    echo "❌ remote 없는 hamstern-data는 init 불가." >&2
+    exit 1
+  }
+  (cd "$HAMSTERN_DATA" && git remote add origin "$HAMSTERN_REPO_URL")
+fi
+```
+
+**로컬-only fallback 제거됨 (2026-05-30 패치).** URL 없으면 init 중단. 사용자가 cross-device로 옮길 일 절대 없다고 확신하더라도 예외 없음 — 미래의 자신이 후회한다.
 
 ### Step 3: UUID 생성
 
