@@ -16,6 +16,8 @@ allowed-tools:
 
 Active hamstern 프로젝트의 `decisions.md` (현재 결정사항) + 최근 N=2 sessions 를 한 번 환기시킨다.
 
+자세한 데이터 스키마·포맷·경로 규약은 [`docs/conventions.md`](../../docs/conventions.md) 참조.
+
 ## 왜 자동 주입이 아닌가
 
 - `/clear` = 진짜 컨텍스트 비우기. 거기에 자동으로 뭔가 채워넣으면 GC 효과가 반감된다.

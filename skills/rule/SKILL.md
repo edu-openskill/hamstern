@@ -15,6 +15,8 @@ allowed-tools:
 
 프로젝트 영구 룰 관리 멀티커맨드 스킬. 사용자가 확신하는 원칙을 `.claude/rules/`에 직접 등록하거나, 기존 룰을 조회/수정/제거/격상한다.
 
+자세한 데이터 스키마·포맷·경로 규약은 [`docs/conventions.md`](../../docs/conventions.md) 참조 (룰 2-경로 영구/잠정은 §9).
+
 > **`project_root`**: 현재 git 루트 디렉토리 (`git rev-parse --show-toplevel` 결과). git 외부면 `cwd`.
 >
 > **두 가지 메모리 위치:**

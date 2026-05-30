@@ -18,6 +18,8 @@ allowed-tools:
 
 사용자의 `hamstern-data` repo 를 정적 multi-project viewer 로 본다. 모든 프로젝트가 하나의 dashboard 에 모인다.
 
+자세한 데이터 스키마·포맷·경로 규약은 [`docs/conventions.md`](../../docs/conventions.md) 참조.
+
 ## 두 모드
 
 | 모드 | 명령 | 데이터 | 자산 출처 | 외부 의존 |

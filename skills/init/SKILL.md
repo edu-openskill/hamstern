@@ -15,6 +15,8 @@ allowed-tools:
 
 새 hamstern 프로젝트를 생성하고 현재 세션을 그 프로젝트로 바인딩.
 
+자세한 데이터 스키마·포맷·경로 규약은 [`docs/conventions.md`](../../docs/conventions.md) 참조.
+
 ## Claude 실행 절차
 
 ### Step 1: 인자 파싱 + hamstern_data_path 확인

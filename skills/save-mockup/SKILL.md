@@ -16,6 +16,8 @@ allowed-tools:
 
 cross-session 보존을 위해 mockup 파일 (HTML/PNG/JPG/SVG 등) 을 hamstern-data 의 active 프로젝트 `mockups/` 에 복사 + `_index.json` 갱신 + commit·push. 이후 GitHub Pages 의 per-project URL 로 어디서든 접근.
 
+자세한 데이터 스키마·포맷·경로 규약은 [`docs/conventions.md`](../../docs/conventions.md) 참조 (`mockups/_index.json` 포맷·URL 유도는 §8).
+
 ## 왜 별도 skill?
 
 - 세션마다 임시로 만든 HTML/이미지 mockup 은 세션이 닫히면 컨텍스트에서 사라짐.

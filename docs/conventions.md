@@ -201,3 +201,48 @@ _마지막 업데이트: {ISO timestamp}_
 | `/hams:dashboard --publish` | hamstern-data 의 `docs/data/` 로 multi-project 번들 + commit·push → `https://<owner>.github.io/hamstern-data/`. |
 
 write 는 record/save-mockup/init 만, 다른 스킬은 reader 또는 reader+editor. hook 은 Sub-C 에서 제거됨 — 자동 캡쳐 없음. 모든 write 후엔 hamstern-data 안에서 git commit + push (네트워크 실패 시 local 만).
+
+## 8. `mockups/_index.json` 포맷 + GitHub Pages URL 유도
+
+`/hams:save-mockup` 이 쓰고, `/hams:remind --mockups` 와 dashboard 가 읽는다.
+
+```json
+{
+  "{filename}": {
+    "title": "{제목}",
+    "description": "{설명, 선택}",
+    "source_session": "{세션 파일명, 예: sess1.md}",
+    "mime_type": "{예: text/html, image/png}",
+    "size_bytes": {정수},
+    "created_at": "{ISO timestamp}"
+  }
+}
+```
+
+per-project Pages URL 은 hamstern-data 의 git origin 에서 유도한다 (owner/repo 추출 — alternation 에 `|` 가 있어 sed delimiter 는 `#` 사용):
+
+```bash
+ORIGIN_URL=$(cd "$HAMSTERN_DATA" && git remote get-url origin)
+OWNER=$(echo "$ORIGIN_URL" | sed -E 's#^(https?://[^/]+/|git@[^:]+:)([^/]+)/.*#\2#')
+REPO=$(echo "$ORIGIN_URL" | sed -E -e 's#/$##' -e 's#\.git$##' -e 's#.*/##')
+URL="https://$OWNER.github.io/$REPO/p/$ACTIVE_UUID/mockups/$FNAME"
+```
+
+결과 예: `https://{owner}.github.io/hamstern-data/p/{uuid}/mockups/{filename}`
+
+## 9. 룰 2-경로: 영구(`.claude/rules/`) vs 잠정(`.hamstern/why/rules/`)
+
+룰은 **프로젝트 자체 repo** 에 저장된다 (hamstern-data 아님). 두 경로가 있다:
+
+| 경로 | 생성 | 자동 로드 | 용도 |
+|------|------|----------|------|
+| `{project_root}/.claude/rules/{topic}.md` (+ `references/{topic}/`) | `/hams:rule add`, `/hams:rule promote` | ✅ 매 세션 (paths frontmatter 매칭 시) | 확정된 영구 룰 |
+| `{project_root}/.hamstern/why/rules/{topic}.md` | `/hams:why` | ❌ 수동 호출만 | 잠정 룰 (재발 시 격상 후보) |
+
+**영구 룰 포인터** (`{topic}.md`) 는 5~10줄: 선택적 `paths:` frontmatter (없으면 전역, 있으면 글로브 한정) + `**원칙:**` 한 줄 + `references/{topic}/` 본문 포인터. 본문(`rule.md`, `examples.md`, `mockup.html`(디자인 타입만), `history.md`)은 lazy-load.
+
+**격상** (`/hams:rule promote {topic}`, 또는 `/hams:why` 가 재발을 감지했을 때): 잠정 룰 → 영구 룰 파일 생성 + 원본 잠정 파일 상단에 마커 삽입:
+
+```
+> 격상됨 → .claude/rules/{topic}.md ({YYYY-MM-DD})
+```

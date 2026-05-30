@@ -7,6 +7,8 @@ description: 과거 결정사항의 타당성 재검토 및 폐기 검증
 
 현재 프로젝트의 확정된 결정사항들을 재검토하고, 여전히 타당한지, 수정이 필요한지, 폐기해야 하는지 검증합니다.
 
+자세한 데이터 스키마·포맷·경로 규약은 [`docs/conventions.md`](../../docs/conventions.md) 참조 (`decisions.md`·`decisions-log.md` 핀 제거 블럭은 §5·§6).
+
 ## 동작 원리
 
 1. **decisions.md 읽기** — 현재 프로젝트의 핀된 결정사항 로드

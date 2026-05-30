@@ -15,6 +15,8 @@ allowed-tools:
 
 기존 hamstern 프로젝트를 현 세션의 active 로 바인딩.
 
+자세한 데이터 스키마·포맷·경로 규약은 [`docs/conventions.md`](../../docs/conventions.md) 참조.
+
 ## Claude 실행 절차
 
 ### Step 1: 인자 + active-project.json 확인
