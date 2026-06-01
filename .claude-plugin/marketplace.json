@@ -5,7 +5,7 @@
   },
   "metadata": {
     "description": "hamstern 프로젝트 관리 플러그인 (Tier 1-4 회의록, 결정사항, 스킬 추천)",
-    "version": "1.1.0"
+    "version": "1.2.0"
   },
   "plugins": [
     {
@@ -17,8 +17,9 @@
         "./skills/skill-creator",
         "./skills/init",
         "./skills/link",
-        "./skills/record",
-        "./skills/remind",
+        "./skills/context-save",
+        "./skills/context-resume",
+        "./skills/context-decisions",
         "./skills/save-mockup",
         "./skills/audit-decisions",
         "./skills/dashboard",
@@ -26,7 +27,9 @@
         "./skills/registry-collector",
         "./skills/why",
         "./skills/rule",
-        "./skills/deeptalk"
+        "./skills/deeptalk",
+        "./skills/record",
+        "./skills/remind"
       ]
     }
   ]
