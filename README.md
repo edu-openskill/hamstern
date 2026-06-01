@@ -53,8 +53,9 @@ Claude 와 한 대화의 결과물은 휘발성이다. `/clear` 한 번이면 �
 |---|---|
 | `/hams:init` | 새 hamstern 프로젝트 생성 (UUID + scaffolding) |
 | `/hams:link` | 기존 프로젝트로 active 바인딩 (부분 이름 매칭) |
-| `/hams:record` | 세션 distill → `sessions/{id}.md` + `decisions.md` atomic dual-write |
-| `/hams:remind` | 결정사항 + 최근 세션 환기 (기본 N=2, 8KB cap; `--deep` N=5; `--mockups`) |
+| `/hams:context-save` | 세션 컨텍스트(맥락 + ADR 결정 + narrative)를 핸드오프 문서로 저장 (`--full` 시 시간순 상세까지) |
+| `/hams:context-resume` | 저장된 세션 상세 환기 → 다음 작업 첫 항목까지 제안 (`--list`로 선택) |
+| `/hams:context-decisions` | `decisions.md`(현 유효 결정 누적)만 빠르게 환기 |
 | `/hams:save-mockup` | HTML/이미지 mockup 을 hamstern-data 에 cross-session 보존 |
 | `/hams:dashboard` | local serve 기본, `--publish` 로 gh-pages multi-project dashboard |
 | `/hams:audit-decisions` | 결정사항 타당성 재검토 (또는 dashboard `[×]` 의 클립보드 명령 흐름) |
@@ -75,23 +76,29 @@ Claude 와 한 대화의 결과물은 휘발성이다. `/clear` 한 번이면 �
 4. 자동으로 UUID 발급 → `hamstern-data/projects/{uuid}/` scaffolding → active 바인딩 → commit + push
 5. (옵션) GitHub Settings → Pages → main `/docs` 활성화 → `/hams:dashboard --publish` 로 휴대폰 등에서 조회 가능
 
-### 2. 결정사항 누적 — `/hams:record`
+### 2. 세션 컨텍스트 저장 — `/hams:context-save`
 
-지금 세션에서 도출된 결정·실패·열린질문을 distill 해서 두 곳에 atomic 으로 쓴다:
+지금 세션의 작업 컨텍스트를 다음 세션이 이어갈 수 있는 핸드오프 문서로 저장한다. 결정 한 줄만이 아니라 **맥락 요약(narrative) + ADR-style 결정 + 미정 + 다음 작업**을 함께 보존:
 
-- `hamstern-data/projects/{uuid}/sessions/{id}.md` — 세션별 full distill
+- `hamstern-data/projects/{uuid}/sessions/{id}.md` — 5섹션 핸드오프 문서 (`--full` 시 시간순 상세 narrative까지)
 - `hamstern-data/projects/{uuid}/decisions.md` — 결정만 append (자동 dedup)
 
-호출 시점: 굵직한 결정을 끝낸 직후, `/clear` 직전. Claude Code CLI + Desktop 양쪽 동작 (Desktop 에서 FS 쓰기 실패 시 동일 마크다운을 채팅에 출력 → CLI 에서 복붙).
+```bash
+/hams:context-save                # 기본 5섹션 저장
+/hams:context-save "제목"          # 제목 지정
+/hams:context-save --full          # 시간순 상세 narrative까지 (deeptalk 보존용)
+```
 
-### 3. 결정사항 환기 — `/hams:remind`
+호출 시점: 굵직한 결정을 끝낸 직후, `/clear` 직전. active 프로젝트가 없으면 먼저 `/hams:init` 또는 `/hams:link` 필요.
 
-`/clear` 후 결정사항이 필요해지면 **명시적으로** 호출. 자동 주입 없음.
+### 3. 세션 환기 — `/hams:context-resume` · `/hams:context-decisions`
+
+`/clear` 후 이전 맥락이 필요해지면 **명시적으로** 호출. 자동 주입 없음.
 
 ```bash
-/hams:remind             # 모든 decisions + 최근 N=2 sessions (8KB cap)
-/hams:remind --deep      # N=5 sessions
-/hams:remind --mockups   # mockup 메타도 포함
+/hams:context-resume             # 가장 최근 세션 상세 환기 + 다음 작업 제안
+/hams:context-resume --list      # 저장된 세션 전체 목록 → 선택
+/hams:context-decisions          # decisions.md(현 유효 결정 누적)만 빠르게 환기
 ```
 
 **왜 자동 주입을 안 하는가:**
@@ -112,7 +119,7 @@ UI 스케치·시뮬레이터·도식 HTML 을 cross-session 보존.
 #  → (gh-pages 활성 시) 즉시 URL 발급
 ```
 
-`/hams:remind --mockups` 로 다른 세션에서도 메타·링크 환기.
+`/hams:dashboard` 로 다른 세션·디바이스에서도 mockup 메타·링크 환기.
 
 ### 5. Dashboard — `/hams:dashboard`
 
@@ -211,7 +218,7 @@ hamstern-data 와 **분리된** 도구. 로컬 `.md` / `.html` 을 GitHub Pages 
 
 ```
 사용자 디바이스 (CLI / Desktop / 모바일 브라우저)
-        ↓ /hams:record · /hams:save-mockup
+        ↓ /hams:context-save · /hams:save-mockup
 hamstern-data/  (사용자 personal GitHub repo, private)
 ├── meta.json                         # schema_version, created_at
 ├── projects/
@@ -285,6 +292,8 @@ hamstern-data/  (사용자 personal GitHub repo, private)
 - **Sub-D** (2026-05-23) — Dashboard static gh-pages + 브라우저 편집 UI (`[×]` 클립보드 흐름)
 - **Sub-E** (2026-05-23) — Dashboard local serve 기본, dynamic port + path traversal 차단
 - **Sub-project F** (2026-05-24) — **hamstern-data repo + UUID per project (git-as-DB)** — 핵심 비전 실현. 신규 skill (`init`/`link`/`save-mockup`) + multi-project dashboard
+- **Sub-G** (2026-05-30) — `record`/`remind` → `context-save`/`context-resume`/`context-decisions` 로 대체 (맥락 narrative + ADR 결정 함께 보존)
+- **Sub-H** (2026-06-01) — 폐기된 `record`/`remind` 스킬 디렉터리·매니페스트 항목 완전 제거 (v1.2.1)
 
 ---
 

@@ -28,11 +28,15 @@ Claude Code 플러그인 업데이터는 **버전 문자열로만** 갱신 여�
 > 매니페스트·버전을 안 건드려, 버전이 `1.1.0` 그대로라 로컬에 동기화가 안 됐다.
 > (`9bc0964`에서 `1.2.0`으로 수정)
 
-## 규칙 3 — 폐기(deprecate)는 파일을 지우지 않는다
+## 규칙 3 — 폐기(deprecate)와 제거(remove)는 2단계다
 
-스킬을 폐기할 때는 SKILL.md를 삭제하지 말고, `[DEPRECATED YYYY-MM-DD]` 표시 +
-대체 스킬 안내 스텁으로 남긴다. 파일이 디스크에 남아 있으면 `skills` 배열에도 등록을 유지한다.
-(예: `record`/`remind` → `context-save`/`context-resume`로 대체, 스텁 유지)
+**1단계 — 폐기:** 스킬을 바로 지우지 말고 `[DEPRECATED YYYY-MM-DD]` 표시 +
+대체 스킬 안내 스텁으로 남긴다. 파일이 디스크에 남아 있는 동안은 `skills` 배열에도 등록을 유지한다.
+(예: `record`/`remind` → `context-save`/`context-resume`/`context-decisions`로 대체)
+
+**2단계 — 제거:** 사용자가 새 스킬에 충분히 이주한 뒤, 별도 커밋에서 SKILL.md 디렉터리를 삭제하고
+`skills` 배열에서도 빼고 버전을 bump한다 (규칙 1·2 동일 적용).
+(예: `record`/`remind`는 2026-06-01 v1.2.1에서 완전 제거됨)
 
 ---
 
