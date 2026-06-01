@@ -49,7 +49,8 @@ Claude Code 플러그인 업데이터는 **버전 문자열로만** 갱신 여�
 
 ```bash
 # skills/ 디스크 목록과 매니페스트 skills 배열이 일치하는지 비교
-diff <(ls skills/ | sort) \
+# (ls가 트레일링 슬래시를 붙일 수 있어 sed로 제거 — 안 하면 항상 MISMATCH 오탐)
+diff <(ls skills/ | sed 's|/$||' | sort) \
      <(grep -oE '"\./skills/[^"]+"' .claude-plugin/marketplace.json | sed 's|"\./skills/||;s|"||' | sort) \
   && echo "OK: 매니페스트와 디스크 일치" || echo "MISMATCH: 위 차이를 marketplace.json에 반영하라"
 
