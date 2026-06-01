@@ -135,32 +135,62 @@ async function copyToClipboard(text) {
   }
 }
 
-// 결정 박스(체인) 클릭 → 상세, 상세의 × → 제거 명령 복사.
-// 상세 패널은 #decisions-list 밖(#decision-render)에 있으므로 document 위임으로 둘 다 잡는다.
+// R1: 결정 목차 — 결정 클릭 → 그 결정이 나온 세션 상세(② 결정사항으로 스크롤),
+// × → 제거(메커니즘 B: serve.py do_POST. 정적 모드 fallback = 클립보드 명령).
+// .del 을 먼저 검사 (× 는 .toc-item 안에 있으므로 행 클릭과 충돌 방지).
 document.addEventListener('click', async (e) => {
-  const node = e.target.closest('.decision-node');
-  if (node) {
-    document.querySelectorAll('.decision-node.active').forEach(n => n.classList.remove('active'));
-    node.classList.add('active');
-    showDecisionDetail(Number(node.dataset.idx));
+  const del = e.target.closest('.del');
+  if (del) {
+    const text = del.dataset.text;
+    if (text) await removeDecision(text);
     return;
   }
-  const del = e.target.closest('.del');
-  if (!del) return;
-  const text = del.dataset.text;
-  if (!text) return;
-  const uuid = window._currentUuid;
-  const cmd = uuid
-    ? `/hams:audit-decisions remove "${escapeForSlashCommand(text)}" --project-uuid ${uuid}`
-    : `/hams:audit-decisions remove "${escapeForSlashCommand(text)}"`;  // fallback (single-project legacy view)
-  const ok = await copyToClipboard(cmd);
-  if (ok) {
-    showToast('복사됨 — Claude 세션에 붙여넣어 실행');
-  } else {
-    showToast('복사 실패 — 콘솔에서 복사하세요');
-    console.log('COPY THIS:', cmd);
+  const item = e.target.closest('.toc-item');
+  if (item) {
+    document.querySelectorAll('.toc-item.active').forEach(n => n.classList.remove('active'));
+    item.classList.add('active');
+    showDecisionSession(item.dataset.session || '');
+    return;
   }
 });
+
+// 삭제: 로컬 서버(serve.py do_POST) 가 있으면 서버사이드 삭제+커밋+push,
+// 없으면(publish 정적) 클립보드 명령으로 graceful fallback.
+async function removeDecision(text) {
+  const uuid = window._currentUuid;
+  try {
+    const r = await fetch('/api/remove-decision', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ uuid, text }),
+    });
+    if (r.ok) {
+      const data = await r.json();
+      if (data && data.ok) {
+        showToast('삭제됨 — GitHub 반영' + (data.pushed ? ' 완료' : ' 대기(오프라인)'));
+        if (window._currentDataPath) await reloadDecisions();
+        return;
+      }
+      throw new Error((data && data.error) || 'remove failed');
+    }
+    throw new Error('no server endpoint');
+  } catch {
+    // fallback: 정적 호스팅(gh-pages) — 서버 없음 → 클립보드 명령
+    const cmd = uuid
+      ? `/hams:audit-decisions remove "${escapeForSlashCommand(text)}" --project-uuid ${uuid}`
+      : `/hams:audit-decisions remove "${escapeForSlashCommand(text)}"`;
+    const ok = await copyToClipboard(cmd);
+    showToast(ok ? '복사됨 — Claude 세션에 붙여넣어 실행' : '복사 실패 — 콘솔 확인');
+    if (!ok) console.log('COPY THIS:', cmd);
+  }
+}
+
+async function reloadDecisions() {
+  try {
+    const md = await fetchText(`${window._currentDataPath}/decisions.md`);
+    renderDecisions(md);
+  } catch { /* keep current view */ }
+}
 
 function parseDecisions(md) {
   // returns [{category, body, raw, session}] in document order (= append/history order)
@@ -184,59 +214,68 @@ function parseDecisions(md) {
 }
 
 function renderDecisions(md) {
-  const el = document.getElementById('decisions-list');
-  const render = document.getElementById('decision-render');
+  const el = document.getElementById('decisions-toc');
+  const pane = document.getElementById('decision-session');
+  if (!el) return;
   if (!md || !md.trim()) {
-    renderEmpty(el, '결정사항 없음<br><small>/hams:record 로 추가 가능</small>');
-    if (render) render.innerHTML = '';
+    renderEmpty(el, '결정사항 없음<br><small>/hams:context-save 로 추가</small>');
+    if (pane) renderEmpty(pane, '결정을 클릭하면 그 결정이 나온 세션이 여기 표시됩니다');
     return;
   }
   const items = parseDecisions(md);
   if (items.length === 0) {
     renderEmpty(el, '결정사항 없음');
-    if (render) render.innerHTML = '';
+    if (pane) renderEmpty(pane, '결정을 클릭하면 그 결정이 나온 세션이 여기 표시됩니다');
     return;
   }
-  window._decisionItems = items;
-  // 문서 순서 = append 순서 = 히스토리. 박스를 → 로 이어 체인으로 표시.
-  let html = '<div class="chain">';
-  items.forEach((it, i) => {
-    const escapedAttr = it.body.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
-    html += `<div class="decision-node" data-idx="${i}" data-text="${escapedAttr}">
-        <div class="node-head">
-          <span class="node-num">#${i + 1}</span>
-          <span class="node-cat">${DOMPurify.sanitize(it.category)}</span>
-        </div>
-        <div class="node-text">${DOMPurify.sanitize(marked.parseInline(it.body))}</div>
-      </div>`;
-    if (i < items.length - 1) html += `<span class="chain-link" aria-hidden="true">→</span>`;
-  });
-  html += '</div>';
+  // R1 목차: 카테고리별 묶되 "무엇을 결정했나" 추적용 순번 목록. 화살표 없음.
+  const byCat = new Map();
+  for (const it of items) {
+    if (!byCat.has(it.category)) byCat.set(it.category, []);
+    byCat.get(it.category).push(it);
+  }
+  let n = 0;
+  let html = '';
+  for (const [cat, list] of byCat) {
+    html += `<div class="toc-cat">${DOMPurify.sanitize(cat)}</div>`;
+    for (const it of list) {
+      n++;
+      const escapedAttr = it.body.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+      const sess = (it.session || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+      html += `<div class="toc-item" data-session="${sess}" data-text="${escapedAttr}" title="클릭 → 출처 세션">
+          <span class="toc-num">${n}</span>
+          <span class="toc-text">${DOMPurify.sanitize(marked.parseInline(it.body))}</span>
+          <span class="del" data-text="${escapedAttr}" title="이 결정 제거">×</span>
+        </div>`;
+    }
+  }
   el.innerHTML = html;
-  if (render) render.innerHTML = '<div class="empty">결정 박스를 클릭하면 상세가 표시됩니다</div>';
+  if (pane) renderEmpty(pane, '결정을 클릭하면 그 결정이 나온 세션이 여기 표시됩니다');
 }
 
-function showDecisionDetail(idx) {
-  const items = window._decisionItems || [];
-  const it = items[idx];
-  const render = document.getElementById('decision-render');
-  if (!it || !render) return;
-  const escapedAttr = it.body.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
-  let sessionHtml = '';
-  if (it.session) {
-    const short = it.session.replace(/^session_/, '').replace(/\.md$/, '');
-    sessionHtml = `<div class="dd-row"><span class="dd-key">출처 세션</span><span class="dd-val">${DOMPurify.sanitize(short)}</span></div>`;
+// R1: 결정 클릭 → 출처 세션 distill 렌더 + ② 결정사항 섹션으로 스크롤(b).
+async function showDecisionSession(sessionFile) {
+  const pane = document.getElementById('decision-session');
+  if (!pane) return;
+  if (!sessionFile) {
+    renderEmpty(pane, '이 결정의 출처 세션 정보가 없습니다');
+    return;
   }
-  const bodyHtml = DOMPurify.sanitize(marked.parseInline(it.body));
-  render.innerHTML = `<div class="decision-detail">
-      <div class="dd-head">
-        <span class="node-num">#${idx + 1}</span>
-        <span class="node-cat">${DOMPurify.sanitize(it.category)}</span>
-        <span class="del" data-text="${escapedAttr}" title="이 결정 제거">× 제거</span>
-      </div>
-      <div class="dd-body">${bodyHtml}</div>
-      ${sessionHtml}
-    </div>`;
+  pane.innerHTML = '<em>loading…</em>';
+  // decisions.md 의 session 마커는 확장자 없는 SESSION_ID — 실제 파일은 {id}.md
+  const file = /\.md$/.test(sessionFile) ? sessionFile : `${sessionFile}.md`;
+  try {
+    const md = await fetchText(`${window._currentDataPath || DATA_PATH}/sessions/${file}`);
+    pane.innerHTML = DOMPurify.sanitize(marked.parse(md));
+    // ② 결정사항 헤딩으로 스크롤 (없으면 맨 위 유지)
+    const heads = pane.querySelectorAll('h1, h2, h3');
+    let target = null;
+    heads.forEach((h) => { if (!target && /결정사항|②/.test(h.textContent)) target = h; });
+    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    else pane.scrollTop = 0;
+  } catch {
+    renderEmpty(pane, `세션 로드 실패: ${sessionFile}`);
+  }
 }
 
 async function renderMockupsList(mockupFilenames, uuid, dataPath) {
@@ -338,7 +377,7 @@ async function loadProject(uuid) {
   try {
     manifest = await fetchJSON(`${dataPath}/manifest.json`);
   } catch (e) {
-    const el = document.getElementById('decisions-list');
+    const el = document.getElementById('decisions-toc');
     if (el) renderEmpty(el,
       'Dashboard 데이터 미생성.<br>Claude 세션에서 <code>/hams:dashboard --publish</code> 호출 후 재방문.');
     return;
@@ -349,7 +388,7 @@ async function loadProject(uuid) {
     const md = await fetchText(`${dataPath}/decisions.md`);
     renderDecisions(md);
   } else {
-    const el = document.getElementById('decisions-list');
+    const el = document.getElementById('decisions-toc');
     if (el) renderEmpty(el, '결정사항 없음');
   }
 

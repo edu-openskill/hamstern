@@ -226,53 +226,55 @@ nav.tabs button.active { background: #1a1a2e; color: white; border-color: #1a1a2
 .sc-date { font-size: 11px; color: #999; font-family: ui-monospace, monospace; margin-bottom: 6px; }
 .sc-title { font-size: 13px; font-weight: 600; color: #222; line-height: 1.4; word-break: break-word; }
 
-/* ── ② 결정 히스토리 체인 ── */
-.chain {
+/* ── ② R1 결정 추적: 목차(좌) + 출처 세션(우) 2-pane ── */
+.decisions-pane {
   display: flex;
-  flex-wrap: wrap;
-  align-items: stretch;
-  gap: 8px;
+  gap: 18px;
+  align-items: flex-start;
 }
-.decision-node {
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-  width: 230px;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  padding: 11px 13px;
-  cursor: pointer;
-  background: #fff;
-  transition: all 0.12s;
+.decisions-toc { width: 380px; flex-shrink: 0; }
+.decision-session {
+  flex: 1;
+  min-width: 0;
+  max-height: 70vh;
+  overflow-y: auto;
+  padding-left: 18px;
+  border-left: 1px solid #eee;
+  font-size: 13px;
+  line-height: 1.6;
 }
-.decision-node:hover { border-color: #99c; box-shadow: 0 2px 10px rgba(0,0,0,0.07); }
-.decision-node.active { border-color: #6663c9; background: #f3f2fc; }
-.node-head { display: flex; align-items: center; gap: 8px; }
-.node-num { font-size: 11px; font-weight: 700; color: #6663c9; font-family: ui-monospace, monospace; }
-.node-cat {
-  font-size: 10px; text-transform: uppercase; letter-spacing: 0.4px;
-  color: #fff; background: #9a9ab0; border-radius: 4px; padding: 1px 6px;
+.decision-session h1, .decision-session h2, .decision-session h3 { margin: 12px 0 6px; }
+.decision-session h1 { font-size: 16px; }
+.decision-session h2 { font-size: 14px; }
+.decision-session pre, .decision-session code {
+  background: #f3f3f3; padding: 1px 4px; border-radius: 3px;
+  font-family: ui-monospace, monospace; font-size: 12px;
 }
-.node-text {
-  font-size: 12px; color: #333; line-height: 1.45;
-  display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;
-}
-.chain-link { align-self: center; color: #c4c4cc; font-size: 18px; font-weight: 700; user-select: none; }
+.decision-session pre { padding: 8px; overflow-x: auto; }
 
-/* ── 결정 상세 패널 ── */
-.decision-render { margin-top: 16px; padding-top: 16px; border-top: 1px solid #eee; }
-.decision-detail .dd-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-.decision-detail .dd-body { font-size: 14px; line-height: 1.6; color: #222; }
-.decision-detail .dd-row { margin-top: 12px; font-size: 12px; display: flex; gap: 8px; }
-.decision-detail .dd-key { color: #999; }
-.decision-detail .dd-val { color: #555; font-family: ui-monospace, monospace; }
-.decision-detail .del {
-  margin-left: auto; color: #c0392b; cursor: pointer; font-size: 12px;
-  border: 1px solid #f0c0bb; border-radius: 5px; padding: 2px 9px; user-select: none;
+.toc-cat {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;
+  color: #888; font-weight: 600; margin: 14px 0 6px;
 }
-.decision-detail .del:hover { background: #fdecea; }
-
-.col-mockups { }
+.toc-cat:first-child { margin-top: 0; }
+.toc-item {
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 8px 10px; border-radius: 6px; cursor: pointer;
+  border: 1px solid transparent; transition: all 0.1s;
+}
+.toc-item:hover { background: #f5f5f9; }
+.toc-item.active { background: #f3f2fc; border-color: #c9c7ef; }
+.toc-num {
+  font-size: 11px; font-weight: 700; color: #6663c9;
+  font-family: ui-monospace, monospace; min-width: 18px; text-align: right; flex-shrink: 0; line-height: 1.5;
+}
+.toc-text { flex: 1; font-size: 13px; color: #333; line-height: 1.5; }
+.toc-item .del {
+  color: #ccc; cursor: pointer; font-size: 18px; line-height: 1;
+  flex-shrink: 0; user-select: none; opacity: 0; transition: opacity 0.1s;
+}
+.toc-item:hover .del { opacity: 1; }
+.toc-item .del:hover { color: #F44336; }
 
 @media (max-width: 768px) {
   nav.tabs { display: flex; padding: 8px; background: white; border-bottom: 1px solid #ddd; gap: 4px; }
@@ -281,4 +283,7 @@ nav.tabs button.active { background: #1a1a2e; color: white; border-color: #1a1a2
   .col { width: 100% !important; display: none; }
   .col.active { display: block; }
   .col-sessions, .col-log, .col-mockups { border-top: 1px solid #ddd; }
+  .decisions-pane { flex-direction: column; }
+  .decisions-toc { width: 100%; }
+  .decision-session { border-left: none; padding-left: 0; border-top: 1px solid #eee; padding-top: 12px; max-height: none; }
 }
