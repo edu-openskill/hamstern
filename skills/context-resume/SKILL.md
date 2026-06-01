@@ -5,7 +5,8 @@ description: |
   맥락 요약 + 결정사항(ADR 풀상세) + 미정 + 다음 작업 + 참조를 그대로 보여주고, 다음 작업 첫 항목으로 작업 제안.
   여러 세션 중 선택 가능 (--list 또는 인자 없이 여럿 매칭 시).
   사용법:
-    /hams:context-resume                  # 가장 최근 세션 환기
+    /hams:context-resume                  # 가장 최근 세션 1개 환기 (기본)
+    /hams:context-resume --last 2         # 가장 최근 N개 세션 함께 환기 (기본 1)
     /hams:context-resume "제목 단편"      # 제목 매칭
     /hams:context-resume --list           # 저장된 세션 전체 목록 → 선택
     /hams:context-resume --full           # ⑥ 세션 상세까지 표시 (저장 시 --full로 저장된 경우만)
@@ -39,15 +40,20 @@ context-save로 저장된 세션을 불러와 다음 세션을 이어가는 진�
 FROM_URL=""
 LIST_ALL=0
 SHOW_FULL=0
+LAST_N=1          # 기본 1개. --last N 으로 직전 N개 함께 환기.
 QUERY=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --from) FROM_URL="$2"; shift 2 ;;
     --list) LIST_ALL=1; shift ;;
     --full) SHOW_FULL=1; shift ;;
+    --last) LAST_N="$2"; shift 2 ;;
     *) [ -z "$QUERY" ] && QUERY="$1"; shift ;;
   esac
 done
+# LAST_N sanitize: 양의 정수만, 아니면 1
+case "$LAST_N" in (*[!0-9]*|"") LAST_N=1 ;; esac
+[ "$LAST_N" -lt 1 ] 2>/dev/null && LAST_N=1
 ```
 
 `--from URL` 있으면: hamstern-data를 clone (또는 pull) 후 프로젝트 선택 → active 바인딩 → 일반 resume 계속. (link --repo 워크플로우 내부 위임. 새 컴퓨터에서 한 줄로 진입.)
@@ -85,10 +91,16 @@ COUNT=$(echo "$FILES" | grep -c .)
 ```
 
 선택 로직:
-- `--list`: 항상 목록 → AskUserQuestion으로 선택
-- QUERY 있음 (제목 단편): 매칭하는 파일들 → 1개면 자동 / 여러개면 AskUserQuestion
-- QUERY 없음 + 후보 1개: 자동 선택
-- QUERY 없음 + 후보 여럿: 가장 최근 자동 선택. 표시 끝에 "다른 세션 보려면 /hams:context-resume --list" 안내
+- `--list`: 항상 목록 → AskUserQuestion으로 선택 (단일)
+- QUERY 있음 (제목 단편): 매칭하는 파일들 → 1개면 자동 / 여러개면 AskUserQuestion (단일)
+- QUERY 없음: **가장 최근 `LAST_N`개** 자동 선택 (기본 1). 최신순(파일명 역순) 상위 N개.
+  - `LAST_N`이 후보 수보다 크면 있는 만큼만.
+  - `LAST_N == 1`이고 후보 여럿이면 표시 끝에 "더 보려면 `/hams:context-resume --last 2` 또는 `--list`" 안내.
+
+```bash
+# 최신순 상위 LAST_N개
+SELECTED=$(echo "$FILES" | head -n "$LAST_N")
+```
 
 목록 표시 형식 (AskUserQuestion 옵션):
 
@@ -99,6 +111,8 @@ COUNT=$(echo "$FILES" | grep -c .)
 ```
 
 ### Step 5: 선택된 세션 표시
+
+`LAST_N`개가 선택되면 **최신순으로 각각** 표시한다 (가장 최근이 위). 각 세션마다 아래 메타 헤더 + 본문(① 맥락 요약 → ⑤ 참조). 여러 개일 때는 세션 사이에 구분선(`───`)을 둔다. 다음 단계 제안(Step 6)은 **가장 최근 세션의 ④ 다음 작업** 기준으로 1회만.
 
 선택된 파일을 그대로 cat. 추가로 머리에 요약 메타:
 

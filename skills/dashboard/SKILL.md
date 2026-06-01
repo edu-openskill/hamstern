@@ -112,9 +112,12 @@ fi
    python3 "$PLUGIN_DIR/skills/dashboard/serve.py" \
      --plugin-dir "$TMP_DOCS" \
      --data-dir "$TMP_DOCS/data" \
+     --hamstern-data "$HAMSTERN_DATA" \
      > "$HAMSTERN_DATA/.dashboard.url" 2>&1 &
    echo $! > "$HAMSTERN_DATA/.dashboard.pid"
    ```
+
+   > `--hamstern-data` 가 있으면 대시보드의 결정 `[×]` 삭제가 serve.py `do_POST /api/remove-decision` 로 **서버사이드 삭제 + git commit·push** 까지 수행한다 (메커니즘 B, 로컬 모드 전용). publish 모드(gh-pages 정적)는 서버가 없어 삭제 미지원 — 읽기 전용 showcase.
 
 7. **URL 대기 (최대 5초 폴링)**
    ```bash
@@ -220,9 +223,11 @@ repo (`hamstern-data`) 의 Settings → Pages → Source: `Deploy from a branch`
 2. `kill $(cat $HAMSTERN_DATA/.dashboard.pid)`
 3. 머신 종료
 
-## 편집 흐름
+## 편집 흐름 (결정 삭제)
 
-dashboard 는 read-only. `[×]` 클릭 → 클립보드 `/hams:audit-decisions remove "<text>" --project-uuid <UUID>` → Claude 세션에 붙여넣어 실행 → remove.py 가 active-project.json 으로 hamstern-data 경로 자동 resolve.
+- **로컬 모드** (`--hamstern-data` 전달됨): 결정 `[×]` 클릭 → 브라우저가 `POST /api/remove-decision {uuid, text}` → serve.py 가 `audit-decisions/remove.py` 의 `run()` 재사용으로 `decisions.md` 줄 삭제 + `decisions-log.md` 제거 이벤트 append → `git add/commit/push`. served 복사본도 동기화해 화면 즉시 반영. (스킬 호출·클립보드 불필요 = 진짜 자동)
+- **publish 모드** (정적 gh-pages): 서버 엔드포인트가 없으므로 `[×]` 가 `/hams:audit-decisions remove "<text>" --project-uuid <UUID>` 클립보드 명령으로 graceful fallback → 사용자가 Claude 세션에 붙여넣어 실행.
+- **감사(audit)** 는 LLM 작업이라 대시보드에서 불가 — 사용자가 Claude 세션에서 `/hams:audit-decisions` (무인자) 직접 실행.
 
 ## `.gitignore` 추천 (사용자의 `hamstern-data` repo 에서)
 
