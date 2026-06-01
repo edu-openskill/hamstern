@@ -204,11 +204,15 @@ fi
 
 각 D 결정의 ADR 5필드 중 **"결정"과 "이유(=왜 대안이 아닌가)"** 만 추려서 카테고리별 append. Jaccard 0.7 dedup. session marker 포함.
 
+**마커 형식:** `<!-- session: {SESSION_ID}#{D번호} -->` — `#{D번호}` 는 이 결정이 그 세션 ②결정사항의 **몇 번째 ADR(D1, D2…)** 인지(1-based). 대시보드가 결정 클릭 시 세션 distill 의 정확한 `### D{n}` 블록으로 스크롤하는 데 쓴다. (`#` 뒤 숫자는 `\S+?` 한 토큰 안이라 remove.py 의 마커 strip 과 호환. 공백 넣지 말 것.)
+
 ```markdown
-- {결정} — {왜 이것이고 대안이 아닌가 요약} <!-- session: {SESSION_ID} -->
+## {카테고리}
+- {결정1} — {왜 이것이고 대안이 아닌가 요약} <!-- session: {SESSION_ID}#1 -->
+- {결정2} — {…} <!-- session: {SESSION_ID}#2 -->
 ```
 
-전체 ADR detail은 sessions/{id}.md에만 보존.
+`{D번호}` 는 sessions/{id}.md ②결정사항의 D 순번과 **반드시 일치**시킨다 (카테고리 그룹핑과 무관하게 ADR 작성 순서 기준). 전체 ADR detail은 sessions/{id}.md에만 보존.
 
 ### Step 7: decisions-log.md append-only 이력
 

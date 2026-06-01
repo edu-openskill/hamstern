@@ -149,7 +149,7 @@ document.addEventListener('click', async (e) => {
   if (item) {
     document.querySelectorAll('.toc-item.active').forEach(n => n.classList.remove('active'));
     item.classList.add('active');
-    showDecisionSession(item.dataset.session || '');
+    showDecisionSession(item.dataset.session || '', item.dataset.dindex || '');
     return;
   }
 });
@@ -205,9 +205,15 @@ function parseDecisions(md) {
       const raw = ln;
       let body = ln.slice(2);
       const sm = body.match(/<!--\s*session:\s*(\S+?)\s*-->/);
-      const session = sm ? sm[1] : null;
+      // 마커 형식: {session_id} 또는 {session_id}#{dIndex} (d번호 = 세션 내 ADR D번호)
+      let session = null, dindex = null;
+      if (sm) {
+        const hash = sm[1].indexOf('#');
+        session = hash >= 0 ? sm[1].slice(0, hash) : sm[1];
+        if (hash >= 0) dindex = sm[1].slice(hash + 1);
+      }
       body = body.replace(/\s*<!--\s*session:\s*\S+?\s*-->\s*$/, '').trim();
-      out.push({ category: currentCat, body, raw, session });
+      out.push({ category: currentCat, body, raw, session, dindex });
     }
   }
   return out;
@@ -242,7 +248,8 @@ function renderDecisions(md) {
       n++;
       const escapedAttr = it.body.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
       const sess = (it.session || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;');
-      html += `<div class="toc-item" data-session="${sess}" data-text="${escapedAttr}" title="클릭 → 출처 세션">
+      const dindex = (it.dindex || '').replace(/[^0-9]/g, '');
+      html += `<div class="toc-item" data-session="${sess}" data-dindex="${dindex}" data-text="${escapedAttr}" title="클릭 → 출처 세션">
           <span class="toc-num">${n}</span>
           <span class="toc-text">${DOMPurify.sanitize(marked.parseInline(it.body))}</span>
           <span class="del" data-text="${escapedAttr}" title="이 결정 제거">×</span>
@@ -253,8 +260,9 @@ function renderDecisions(md) {
   if (pane) renderEmpty(pane, '결정을 클릭하면 그 결정이 나온 세션이 여기 표시됩니다');
 }
 
-// R1: 결정 클릭 → 출처 세션 distill 렌더 + ② 결정사항 섹션으로 스크롤(b).
-async function showDecisionSession(sessionFile) {
+// R1: 결정 클릭 → 출처 세션 distill 렌더 + 그 결정의 ADR(D{dIndex}) 블록으로 스크롤(c).
+// dIndex 없으면(구 데이터) ② 결정사항 섹션 헤딩으로 fallback(b).
+async function showDecisionSession(sessionFile, dIndex) {
   const pane = document.getElementById('decision-session');
   if (!pane) return;
   if (!sessionFile) {
@@ -267,12 +275,32 @@ async function showDecisionSession(sessionFile) {
   try {
     const md = await fetchText(`${window._currentDataPath || DATA_PATH}/sessions/${file}`);
     pane.innerHTML = DOMPurify.sanitize(marked.parse(md));
-    // ② 결정사항 헤딩으로 스크롤 (없으면 맨 위 유지)
-    const heads = pane.querySelectorAll('h1, h2, h3');
+
     let target = null;
-    heads.forEach((h) => { if (!target && /결정사항|②/.test(h.textContent)) target = h; });
-    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    else pane.scrollTop = 0;
+    const k = parseInt(dIndex, 10);
+    if (k > 0) {
+      // ADR 헤딩 "### Dk. ..." 매칭 (정확 → 그 결정 블록). 없으면 k번째 h3.
+      const re = new RegExp('^\\s*D' + k + '\\b');
+      const hs = pane.querySelectorAll('h1, h2, h3, h4');
+      hs.forEach((h) => { if (!target && re.test(h.textContent)) target = h; });
+      if (!target) {
+        const h3s = pane.querySelectorAll('h3');
+        if (h3s.length >= k) target = h3s[k - 1];
+      }
+    }
+    if (!target) {
+      // fallback(b): ② 결정사항 섹션 헤딩
+      pane.querySelectorAll('h1, h2, h3').forEach((h) => {
+        if (!target && /결정사항|②/.test(h.textContent)) target = h;
+      });
+    }
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      target.classList.add('dd-highlight');
+      setTimeout(() => target.classList.remove('dd-highlight'), 1600);
+    } else {
+      pane.scrollTop = 0;
+    }
   } catch {
     renderEmpty(pane, `세션 로드 실패: ${sessionFile}`);
   }

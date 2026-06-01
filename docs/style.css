@@ -251,6 +251,10 @@ nav.tabs button.active { background: #1a1a2e; color: white; border-color: #1a1a2
   font-family: ui-monospace, monospace; font-size: 12px;
 }
 .decision-session pre { padding: 8px; overflow-x: auto; }
+.decision-session .dd-highlight {
+  background: #fff6c9; border-radius: 4px;
+  box-shadow: 0 0 0 6px #fff6c9; transition: background 0.4s, box-shadow 0.4s;
+}
 
 .toc-cat {
   font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;
