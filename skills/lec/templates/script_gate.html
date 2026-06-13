@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="robots" content="noindex, nofollow" />
+<title>🔒 판서 대본 · {{LEC_TITLE}}</title>
+<style>
+  :root{--bg:#0d1117;--panel:#161b22;--line:#2a3340;--txt:#e6edf3;--muted:#9aa7b4;--accent:#f472b6;--accent2:#a78bfa}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,"Segoe UI","Apple SD Gothic Neo","Noto Sans KR",sans-serif;line-height:1.75}
+  .bar{display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg)}
+  .bar a{color:var(--muted);text-decoration:none;font-size:.9rem}
+  .bar .tag{margin-left:auto;color:var(--accent);font-weight:700;font-size:.85rem}
+  .gate{max-width:420px;margin:14vh auto;padding:30px 26px;background:var(--panel);border:1px solid var(--line);border-radius:18px;text-align:center}
+  .gate h1{font-size:1.2rem;margin:0 0 6px}
+  .gate p{color:var(--muted);font-size:.9rem;margin:0 0 18px}
+  .gate input{width:100%;padding:13px 14px;border-radius:11px;border:1px solid var(--line);background:#0d1117;color:var(--txt);font-size:1rem;text-align:center;letter-spacing:2px}
+  .gate button{margin-top:12px;width:100%;padding:13px;border:0;border-radius:11px;background:linear-gradient(120deg,var(--accent),var(--accent2));color:#0d1117;font-weight:800;font-size:1rem;cursor:pointer}
+  .gate .err{color:#fb7185;font-size:.85rem;min-height:1.2em;margin-top:10px}
+  .doc{max-width:780px;margin:0 auto;padding:24px 22px 90px}
+  .doc h1,.doc h2,.doc h3{line-height:1.25}
+  .doc h1{font-size:1.7rem;border-bottom:1px solid var(--line);padding-bottom:.3em}
+  .doc h2{font-size:1.35rem;margin-top:1.6em}
+  .doc code{background:#1c2230;padding:.15em .4em;border-radius:6px;font-size:.92em}
+  .doc pre{background:#1c2230;padding:14px 16px;border-radius:12px;overflow:auto}
+  .doc blockquote{border-left:3px solid var(--accent2);margin:1em 0;padding:.2em 1em;color:var(--muted)}
+  .doc img{max-width:100%}
+  [hidden]{display:none!important}
+</style>
+</head>
+<body>
+  <div class="bar">
+    <a href="../../index.html">← 강의 목록</a>
+    <span class="tag">🔒 {{LEC_NO}} 판서 대본 · 비공개</span>
+  </div>
+
+  <div id="gate" class="gate">
+    <h1>🔒 잠긴 대본</h1>
+    <p>이 판서 대본은 암호화되어 있습니다.<br/>비밀번호를 입력하세요.</p>
+    <input id="pw" type="password" autocomplete="off" placeholder="비밀번호" />
+    <button id="go">열기</button>
+    <div id="err" class="err"></div>
+  </div>
+
+  <article id="doc" class="doc" hidden></article>
+
+  <script>
+  // ── 빌드 시 주입되는 암호문 (비밀번호 없이는 의미 없는 데이터) ──
+  var PAYLOAD = { cipher:"{{CIPHER}}", salt:"{{SALT}}", iv:"{{IV}}", iters:{{ITERS}} };
+
+  function b64ToBytes(b){var s=atob(b),a=new Uint8Array(s.length);for(var i=0;i<s.length;i++)a[i]=s.charCodeAt(i);return a;}
+
+  async function unlock(pw){
+    var enc=new TextEncoder();
+    var keyMat=await crypto.subtle.importKey('raw',enc.encode(pw),{name:'PBKDF2'},false,['deriveKey']);
+    var key=await crypto.subtle.deriveKey(
+      {name:'PBKDF2',salt:b64ToBytes(PAYLOAD.salt),iterations:PAYLOAD.iters,hash:'SHA-256'},
+      keyMat,{name:'AES-GCM',length:256},false,['decrypt']);
+    var plain=await crypto.subtle.decrypt({name:'AES-GCM',iv:b64ToBytes(PAYLOAD.iv)},key,b64ToBytes(PAYLOAD.cipher));
+    return new TextDecoder().decode(plain);
+  }
+
+  function go(){
+    var pw=document.getElementById('pw').value;
+    var err=document.getElementById('err');
+    err.textContent='';
+    if(!pw){err.textContent='비밀번호를 입력하세요.';return;}
+    unlock(pw).then(function(html){
+      var doc=document.getElementById('doc');
+      doc.innerHTML=html;
+      doc.hidden=false;
+      document.getElementById('gate').hidden=true;
+      try{document.title='📝 '+document.title.replace('🔒 판서 대본 · ','');}catch(e){}
+    }).catch(function(){err.textContent='비밀번호가 틀렸습니다.';});
+  }
+  document.getElementById('go').addEventListener('click',go);
+  document.getElementById('pw').addEventListener('keydown',function(e){if(e.key==='Enter')go();});
+  document.getElementById('pw').focus();
+  </script>
+</body>
+</html>

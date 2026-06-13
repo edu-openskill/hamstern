@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>{{BLOG_TITLE}}</title>
+<meta name="description" content="{{BLOG_TAGLINE}}" />
+<link rel="stylesheet" href="assets/style.css" />
+<script>(function(){try{var t=localStorage.getItem('lec-theme')||'dark';document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="logo" href="./"><span class="logo__sigil">講</span> {{BLOG_TITLE}}</a>
+    <button id="theme-toggle" class="theme-toggle" type="button" title="라이트/다크">◐</button>
+  </header>
+
+  <section class="cover">
+    <div class="cover__inner">
+      <p class="cover__eyebrow">LECTURE SERIES</p>
+      <h1 class="cover__title">{{BLOG_HERO_TITLE}}</h1>
+      <p class="cover__lede">{{BLOG_TAGLINE}}</p>
+    </div>
+  </section>
+
+  <main class="syllabus" id="syllabus">
+    <h2 class="syllabus__title">강의 목차</h2>
+    <p class="syllabus__hint" id="empty-hint" hidden>아직 등록된 강의가 없습니다.</p>
+    <div id="lecture-groups"></div>
+  </main>
+
+  <footer class="footer"><span>© {{BLOG_YEAR}} {{BLOG_TITLE}}</span></footer>
+  <script src="assets/app.js"></script>
+</body>
+</html>
