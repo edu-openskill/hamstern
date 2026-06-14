@@ -31,3 +31,22 @@ def load_meta(active):
 def save_meta(active, meta):
     with open(_meta_path(active), "w", encoding="utf-8") as f:
         json.dump(meta, f, ensure_ascii=False, indent=2)
+
+
+def resolve_globs(project_root, ssot_paths):
+    files = []
+    for pat in ssot_paths:
+        for m in glob.glob(os.path.join(project_root, pat), recursive=True):
+            if os.path.isfile(m):
+                files.append(os.path.relpath(m, project_root).replace(os.sep, "/"))
+    return sorted(set(files))
+
+
+def check_pointers(project_root, ssot_paths):
+    findings = []
+    for pat in ssot_paths:
+        hits = glob.glob(os.path.join(project_root, pat), recursive=True)
+        if not any(os.path.isfile(h) for h in hits):
+            findings.append(Finding("ERROR", pat,
+                                    "지정된 SSOT 경로가 더는 존재하지 않음 (메타-드리프트)"))
+    return findings

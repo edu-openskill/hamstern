@@ -30,3 +30,18 @@ def test_load_and_save_meta_roundtrip(tmp_path, monkeypatch):
     ssot.save_meta(active, meta)
     assert ssot.load_meta(active)["ssot_paths"] == [".claude/rules/*.md"]
     assert ssot.load_meta(active)["uuid"] == "u1"
+
+
+def test_resolve_globs_matches_existing(tmp_path):
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "docs" / "PRD.md").write_text("x", encoding="utf-8")
+    assert ssot.resolve_globs(str(tmp_path), ["docs/*.md"]) == ["docs/PRD.md"]
+
+
+def test_check_pointers_flags_broken_glob(tmp_path):
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "docs" / "PRD.md").write_text("x", encoding="utf-8")
+    findings = ssot.check_pointers(str(tmp_path), ["docs/PRD.md", "missing/*.md"])
+    locs = [(f.severity, f.location) for f in findings]
+    assert ("ERROR", "missing/*.md") in locs
+    assert all(f.location != "docs/PRD.md" for f in findings)
