@@ -12,7 +12,8 @@ def resolve_active_project():
     cfg = os.path.join(_home(), ".config", "hamstern", "active-project.json")
     if not os.path.isfile(cfg):
         sys.exit('❌ active project 없음. /hams:link "name" 또는 /hams:init "name" 먼저.')
-    c = json.load(open(cfg, encoding="utf-8"))
+    with open(cfg, encoding="utf-8") as f:
+        c = json.load(f)
     proj_dir = os.path.join(c["hamstern_data_path"], "projects", c["uuid"])
     return {"uuid": c["uuid"], "name": c["name"],
             "hamstern_data": c["hamstern_data_path"], "proj_dir": proj_dir}
@@ -23,9 +24,10 @@ def _meta_path(active):
 
 
 def load_meta(active):
-    return json.load(open(_meta_path(active), encoding="utf-8"))
+    with open(_meta_path(active), encoding="utf-8") as f:
+        return json.load(f)
 
 
 def save_meta(active, meta):
-    json.dump(meta, open(_meta_path(active), "w", encoding="utf-8"),
-              ensure_ascii=False, indent=2)
+    with open(_meta_path(active), "w", encoding="utf-8") as f:
+        json.dump(meta, f, ensure_ascii=False, indent=2)

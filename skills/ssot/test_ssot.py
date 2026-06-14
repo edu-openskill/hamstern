@@ -29,3 +29,4 @@ def test_load_and_save_meta_roundtrip(tmp_path, monkeypatch):
     meta["ssot_paths"] = [".claude/rules/*.md"]
     ssot.save_meta(active, meta)
     assert ssot.load_meta(active)["ssot_paths"] == [".claude/rules/*.md"]
+    assert ssot.load_meta(active)["uuid"] == "u1"
