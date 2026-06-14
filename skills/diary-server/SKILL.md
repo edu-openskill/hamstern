@@ -170,7 +170,7 @@ diary_config.save(cfg)
 
 ### 0-3. `config` 서브명령 분기
 
-마이그레이션 후 `cfg['profiles'][cfg['active']]` 를 **P** (활성 프로파일) 라고 한다.
+활성 server 프로파일은 `name, P = diary_config.resolve(cfg, 'server', override)` 로 가져온다 (P = 활성 프로파일).
 
 | 명령 | 동작 |
 |---|---|
@@ -179,9 +179,9 @@ diary_config.save(cfg)
 | `config template {1-5\|name}` | `TEMPLATES = ['minimal','tech','lecture','notebook','magazine']`. 숫자/이름 검증 후 `P['template']` 갱신 |
 | `config search on\|off` | on이면 Node.js (`npx`) 가용성 체크 + `npx -y pagefind --version` 사전 다운로드 → `P['features']['search'] = on/off` |
 | `config blog-title "{title}"` | `P['blogTitle'] = title` |
-| `config profile list` | `cfg['profiles']` 키 목록 + `cfg['active']` 표시 |
-| `config profile add {name} {url}` | 이름 충돌 검사 → `cfg['profiles'][name] = {'repo': url, 'template': 'tech'}` 등록 |
-| `config profile use {name}` | 존재 검증 → `cfg['active'] = name` |
+| `config profile list` | `type=='server'` 프로파일 목록 + `cfg['activeServer']` 표시 |
+| `config profile add {name} {url}` | 이름 충돌 검사 → `cfg['profiles'][name] = {'type': 'server', 'repo': url, 'template': 'tech', 'features': {'search': True}}` 등록 |
+| `config profile use {name}` | 존재 검증 → `diary_config.set_active(cfg, name)` |
 | `config profile remove {name}` | 활성이면 다른 프로파일로 자동 전환. 마지막 1개면 거부 |
 
 모든 갱신은 `json.dump(cfg, open(p, 'w', encoding='utf-8'), ensure_ascii=False, indent=2)` 로 저장 후 종료. publish/edit는 트리거되지 않는다.
@@ -332,7 +332,7 @@ diary_config.save(cfg)
 
 `publish` 또는 `edit` 로 라우팅된 경우:
 
-1. 인자에서 `--profile {name}` 추출 → 있으면 그 이름, 없으면 `cfg['active']`
+1. 인자에서 `--profile {name}` 추출 → 있으면 그 이름, 없으면 `cfg['activeServer']`
 2. `cfg['profiles'][name]` 존재 여부 검증 (없으면 에러 종료: "프로파일 없음. `/hams:diary-server config profile list` 로 확인")
 3. 활성 프로파일 P에서 다음 변수 추출:
 
@@ -720,7 +720,7 @@ json.dump(d, open(p, 'w', encoding='utf-8'), ensure_ascii=False, indent=2)
 ### 공통 (모든 서브명령 진입 시)
 
 - [ ] **인자 토큰 분류** — `publish` / `edit` / `delete` / `config <sub>` / `option` / 그 외
-- [ ] **설정 자동 마이그레이션** — `~/.claude/hams-diary.json` Read → flat schema(`{repo, template, ...}`)면 `.bak` 백업 후 `{active, profiles}` 로 변환 (0-1 로직)
+- [ ] **설정 자동 마이그레이션** — `~/.claude/hams-diary.json` Read → flat schema(`{repo, template, ...}`)면 `.bak` 백업 후 `{activeServer, activeLocal, profiles}` 로 변환 (0-1 로직)
 - [ ] 그 외 토큰이면 "알 수 없는 명령. `/hams:diary-server option` 으로 사용법을 확인하세요" 출력 후 종료
 
 ### `option` 분기
@@ -729,7 +729,7 @@ json.dump(d, open(p, 'w', encoding='utf-8'), ensure_ascii=False, indent=2)
 
 ### `config` 분기
 
-- [ ] `cfg['profiles'][cfg['active']]` 를 P로 가져옴 (없으면 P = {})
+- [ ] `diary_config.resolve(cfg, 'server', override)` 로 P 결정 (없으면 에러 종료)
 - [ ] 0-3 표대로 처리:
   - `show` → cfg 보기 좋게 출력
   - `repo` / `template` / `search` / `blog-title` → P 갱신
@@ -740,7 +740,7 @@ json.dump(d, open(p, 'w', encoding='utf-8'), ensure_ascii=False, indent=2)
 
 ### `publish` 분기
 
-- [ ] 인자에서 `--profile {name}` 추출 → 없으면 `cfg['active']`
+- [ ] 인자에서 `--profile {name}` 추출 → 없으면 `cfg['activeServer']`
 - [ ] `cfg['profiles'][name]` 검증 (없으면 에러 종료: "프로파일 없음. /hams:diary-server config profile list 로 확인")
 - [ ] 활성 프로파일에서 PROFILE_NAME, REPO_URL, OWNER, NAME, PAGES_URL, TEMPLATE, BLOG_TITLE, FEATURES, LOCAL_DIR, WORKTREE_DIR 결정 (0-5)
 - [ ] **JOBS 배열 구성** — 단일/디렉토리/글롭 분기, 한글 파일명 PowerShell 폴백
