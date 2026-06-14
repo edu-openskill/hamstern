@@ -65,6 +65,27 @@ def test_save_load_roundtrip():
         assert dc.load(p) == cfg
 
 
+def test_save_bare_filename():
+    cfg, _ = dc.migrate({"repo": "u"})
+    d = tempfile.mkdtemp()
+    cwd = os.getcwd()
+    try:
+        os.chdir(d)
+        dc.save(cfg, "hams-diary.json")  # no directory component in path
+        assert dc.load("hams-diary.json") == cfg
+    finally:
+        os.chdir(cwd)
+
+
+def test_active_rename_preserves_existing_active_server():
+    cfg, changed = dc.migrate({"active": "old", "activeServer": "current",
+                               "profiles": {"current": {"type": "server"},
+                                            "old": {"type": "server"}}})
+    assert changed
+    assert cfg["activeServer"] == "current"  # must NOT be stomped by legacy 'active'
+    assert "active" not in cfg
+
+
 if __name__ == "__main__":
     fns = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
     for fn in fns:

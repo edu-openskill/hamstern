@@ -29,14 +29,16 @@ def migrate(cfg):
     changed = False
     # 1) flat schema {repo, template, ...} -> multi-profile
     if "profiles" not in cfg and ("repo" in cfg or "template" in cfg):
-        cfg = {"profiles": {"default": cfg}}
+        cfg = {"profiles": {"default": dict(cfg)}}
         changed = True
     if not isinstance(cfg.get("profiles"), dict):
         cfg["profiles"] = {}
         changed = True
-    # 2) old single 'active' -> 'activeServer'
+    # 2) old single 'active' -> 'activeServer' (don't clobber an existing one)
     if "active" in cfg:
-        cfg["activeServer"] = cfg.pop("active")
+        if "activeServer" not in cfg:
+            cfg["activeServer"] = cfg["active"]
+        cfg.pop("active")
         changed = True
     # 3) backfill type=server on legacy profiles (all were repo-based)
     for prof in cfg["profiles"].values():
@@ -60,7 +62,9 @@ def migrate(cfg):
 def save(cfg, path=DEFAULT_PATH, backup=False):
     if backup and os.path.exists(path):
         shutil.copy(path, path + ".bak")
-    os.makedirs(os.path.dirname(path), exist_ok=True)
+    d = os.path.dirname(path)
+    if d:
+        os.makedirs(d, exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
         json.dump(cfg, f, ensure_ascii=False, indent=2)
 
