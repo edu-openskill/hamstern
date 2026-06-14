@@ -332,6 +332,27 @@ async function renderMockupsList(mockupFilenames, uuid, dataPath) {
   el.innerHTML = html;
 }
 
+function renderSsotList(ssot) {
+  const el = document.getElementById('ssot-list');
+  if (!el) return; // page doesn't have ssot column
+  if (!ssot || ssot.length === 0) {
+    renderEmpty(el, 'SSOT 문서 없음');
+    return;
+  }
+  let html = '';
+  for (const e of ssot) {
+    const icon = e.kind === 'glob' ? '📁' : '📄';
+    const label = DOMPurify.sanitize(e.label);
+    if (e.url) {
+      const url = DOMPurify.sanitize(e.url);
+      html += `<a href="${url}" target="_blank" class="ssot-item">${icon} ${label}</a>`;
+    } else {
+      html += `<div class="ssot-item ssot-nolink">${icon} ${label}</div>`;
+    }
+  }
+  el.innerHTML = html;
+}
+
 async function load() {
   const path = window.location.pathname;
 
@@ -432,6 +453,7 @@ async function loadProject(uuid) {
 
   // Sub-F: mockups column
   await renderMockupsList(manifest.mockups || [], uuid, dataPath);
+  renderSsotList(manifest.ssot);
 }
 
 function activateTab(name) {
