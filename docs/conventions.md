@@ -200,7 +200,7 @@ _마지막 업데이트: {ISO timestamp}_
 | `/hams:dashboard` (local 기본) | hamstern-data 전체 → 임시 dir 로 multi-project 번들 + background 서버 + http://localhost:<dynamic_port>/. |
 | `/hams:dashboard --publish` | hamstern-data 의 `docs/data/` 로 multi-project 번들 + commit·push → `https://<owner>.github.io/hamstern-data/`. |
 
-write 는 record/save-mockup/init 만, 다른 스킬은 reader 또는 reader+editor. hook 은 Sub-C 에서 제거됨 — 자동 캡쳐 없음. 모든 write 후엔 hamstern-data 안에서 git commit + push (네트워크 실패 시 local 만).
+write 는 context-save/save-mockup/init 만, 다른 스킬은 reader 또는 reader+editor. hook 은 Sub-C 에서 제거됨 — 자동 캡쳐 없음. 모든 write 후엔 hamstern-data 안에서 git commit + push (네트워크 실패 시 local 만).
 
 ## 8. `mockups/_index.json` 포맷 + GitHub Pages URL 유도
 
