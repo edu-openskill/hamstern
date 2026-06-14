@@ -15,6 +15,31 @@ SCHEMA_VERSION = 1
 SCHEMA_VERSION_MULTI = 2
 
 
+def _static_prefix(pattern: str) -> str:
+    segs = []
+    for seg in pattern.split("/"):
+        if "*" in seg:
+            break
+        segs.append(seg)
+    return "/".join(segs)
+
+
+def _ssot_entries(meta: dict) -> list:
+    paths = meta.get("ssot_paths") or []
+    repo_url = meta.get("repo_url")
+    entries = []
+    for p in paths:
+        if "*" in p:
+            prefix = _static_prefix(p)
+            url = (f"{repo_url}/tree/HEAD/{prefix}".rstrip("/")
+                   if repo_url else None)
+            entries.append({"label": p, "url": url, "kind": "glob"})
+        else:
+            url = f"{repo_url}/blob/HEAD/{p}" if repo_url else None
+            entries.append({"label": p, "url": url, "kind": "file"})
+    return entries
+
+
 def run_single_project(src_dir: Path, out_dir: Path) -> dict:
     """직접 source 디렉터리를 받아 out 으로 번들. .hamstern 가정 없음.
 
@@ -39,7 +64,8 @@ def run_single_project(src_dir: Path, out_dir: Path) -> dict:
         "decisions": False,
         "decisions_log": False,
         "sessions": [],
-        "mockups": []
+        "mockups": [],
+        "ssot": []
     }
 
     decisions_src = src_dir / "decisions.md"
@@ -77,6 +103,16 @@ def run_single_project(src_dir: Path, out_dir: Path) -> dict:
         if idx.exists():
             shutil.copy2(idx, mockups_out / "_index.json")
         manifest["mockups"] = mockup_names
+
+    # Sub-F: SSOT 링크 (meta.json — 복사 없이 GitHub 링크만)
+    meta_src = src_dir / "meta.json"
+    meta = {}
+    if meta_src.is_file():
+        try:
+            meta = json.loads(meta_src.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            meta = {}
+    manifest["ssot"] = _ssot_entries(meta)
 
     (out_dir / "manifest.json").write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",

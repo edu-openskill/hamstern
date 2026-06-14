@@ -164,3 +164,51 @@ def test_build_multiproject_writes_each_uuid(tmp_path):
     assert root_manifest["schema_version"] == 2  # Sub-F bumps
     assert set(root_manifest["projects"].keys()) == {"uuid-1", "uuid-2"}
     assert root_manifest["projects"]["uuid-1"]["name"] == "Proj 1"
+
+
+def test_ssot_entries_concrete_and_glob():
+    meta = {"ssot_paths": ["docs/PRD.md", "skills/**/SKILL.md"],
+            "repo_url": "https://github.com/o/r"}
+    entries = build._ssot_entries(meta)
+    assert entries == [
+        {"label": "docs/PRD.md",
+         "url": "https://github.com/o/r/blob/HEAD/docs/PRD.md", "kind": "file"},
+        {"label": "skills/**/SKILL.md",
+         "url": "https://github.com/o/r/tree/HEAD/skills", "kind": "glob"},
+    ]
+
+
+def test_ssot_entries_no_repo_url_gives_none():
+    meta = {"ssot_paths": ["docs/PRD.md"]}
+    assert build._ssot_entries(meta) == [
+        {"label": "docs/PRD.md", "url": None, "kind": "file"}]
+
+
+def test_ssot_entries_empty_when_no_paths():
+    assert build._ssot_entries({}) == []
+
+
+def test_ssot_glob_at_root_prefix_empty():
+    meta = {"ssot_paths": ["*.md"], "repo_url": "https://github.com/o/r"}
+    assert build._ssot_entries(meta) == [
+        {"label": "*.md", "url": "https://github.com/o/r/tree/HEAD", "kind": "glob"}]
+
+
+def test_run_single_project_includes_ssot_from_meta(tmp_path):
+    src = tmp_path / "proj"
+    src.mkdir()
+    (src / "meta.json").write_text(json.dumps(
+        {"ssot_paths": ["docs/PRD.md"], "repo_url": "https://github.com/o/r"}),
+        encoding="utf-8")
+    out = tmp_path / "out"
+    manifest = build.run_single_project(src, out)
+    assert manifest["ssot"] == [
+        {"label": "docs/PRD.md",
+         "url": "https://github.com/o/r/blob/HEAD/docs/PRD.md", "kind": "file"}]
+
+
+def test_run_single_project_ssot_empty_without_meta(tmp_path):
+    src = tmp_path / "proj"; src.mkdir()
+    out = tmp_path / "out"
+    manifest = build.run_single_project(src, out)
+    assert manifest["ssot"] == []
