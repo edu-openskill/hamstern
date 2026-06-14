@@ -50,3 +50,43 @@ def check_pointers(project_root, ssot_paths):
             findings.append(Finding("ERROR", pat,
                                     "지정된 SSOT 경로가 더는 존재하지 않음 (메타-드리프트)"))
     return findings
+
+
+def parse_finding_line(line):
+    parts = line.rstrip("\n").split("\t")
+    if len(parts) != 3 or parts[0] not in ("ERROR", "WARN"):
+        return None
+    return Finding(parts[0], parts[1], parts[2])
+
+
+def discover_extractors(project_root, builtin_dir):
+    found = [os.path.join(builtin_dir, "skill_registry_check.py")]
+    seam = os.path.join(project_root, ".hamstern", "ssot-extractors")
+    if os.path.isdir(seam):
+        for f in sorted(os.listdir(seam)):
+            if f.endswith(".sh"):
+                found.append(os.path.join(seam, f))
+    return found
+
+
+def run_extractors(project_root, ssot_files, extractor_paths):
+    findings = []
+    for ext in extractor_paths:
+        cmd = ([sys.executable, ext] if ext.endswith(".py") else ["bash", ext])
+        proc = subprocess.run(cmd + [project_root, *ssot_files],
+                              capture_output=True, text=True)
+        for line in proc.stdout.splitlines():
+            f = parse_finding_line(line)
+            if f:
+                findings.append(f)
+    return findings
+
+
+def format_report(findings):
+    if not findings:
+        return "✅ SSOT freshness: 이상 없음"
+    icon = {"ERROR": "🔴", "WARN": "⚠️"}
+    lines = ["SSOT freshness 리포트 (advisory):"]
+    for f in findings:
+        lines.append(f"  {icon[f.severity]} {f.location} · {f.message}")
+    return "\n".join(lines)
