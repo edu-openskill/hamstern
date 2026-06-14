@@ -138,13 +138,28 @@ allowed-tools:
 
 스키마는 `{activeServer, activeLocal, profiles{<name>:{type, repo|dir, template, ...}}}`. server 스킬은 `type=="server"` 프로파일만 다룬다.
 
+### 0-1.1 첫 프로파일 초기화 (설정/프로파일 없음)
+
+`publish`/`edit`/`delete`/`config` 호출인데 `diary_config.load()`가 `None`이거나 server 타입 프로파일이 하나도 없으면, AskUserQuestion으로 (a) 프로파일 이름(기본 `default`), (b) 발행 대상 GitHub 레포 URL, (c) 템플릿(기본 `tech`)을 받아 초기화한다:
+
+```python
+cfg = cfg or {"profiles": {}}
+cfg.setdefault("profiles", {})[name] = {
+    "type": "server", "repo": <url>, "template": <tmpl>, "features": {"search": True}
+}
+cfg["activeServer"] = name
+diary_config.save(cfg)
+```
+
+`option` 호출 시에는 설정이 없어도 초기화하지 않고 안내만 출력한다.
+
 ### 0-2. 서브명령 라우팅
 
 인자 1번째 토큰으로 분기:
 
 | 토큰 | 분기 |
 |---|---|
-| `publish` | publish 흐름 (1️⃣~🔟) |
+| `publish` | publish 흐름 (렌더링 단계 + 2️⃣·6️⃣·7️⃣·9️⃣·🔟) |
 | `edit {slug|id}` | edit 모드 |
 | `delete {title|id}` | 0-3.2 — 삭제 (제목 유사도 또는 숫자 ID) |
 | `config <sub>` | 0-3 |
