@@ -58,7 +58,7 @@ nav.tabs button.active { background: #1a1a2e; color: white; border-color: #1a1a2
   margin: 0 auto;
 }
 .col.active { display: block; }
-.col-sessions, .col-decisions, .col-log, .col-mockups {
+.col-sessions, .col-decisions, .col-log, .col-mockups, .col-ssot {
   width: auto; flex: none; min-width: 0;
 }
 .col h2 {

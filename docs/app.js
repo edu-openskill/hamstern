@@ -343,7 +343,7 @@ function renderSsotList(ssot) {
   for (const e of ssot) {
     const icon = e.kind === 'glob' ? '📁' : '📄';
     const label = DOMPurify.sanitize(e.label);
-    if (e.url) {
+    if (e.url && /^https?:\/\//.test(e.url)) {
       const url = DOMPurify.sanitize(e.url);
       html += `<a href="${url}" target="_blank" rel="noopener noreferrer" class="ssot-item">${icon} ${label}</a>`;
     } else {
