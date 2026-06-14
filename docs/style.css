@@ -203,6 +203,18 @@ nav.tabs button.active { background: #1a1a2e; color: white; border-color: #1a1a2
 .mockup-title { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
 .mockup-meta { font-size: 11px; color: #888; }
 
+.ssot-item {
+  display: block;
+  padding: 10px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  margin-bottom: 6px;
+  text-decoration: none;
+  color: inherit;
+}
+.ssot-item:hover { background: #f9f9f9; }
+.ssot-nolink { opacity: 0.6; cursor: default; }
+
 /* ── ① 세션 카드 그리드 ── */
 .session-grid {
   display: grid;
