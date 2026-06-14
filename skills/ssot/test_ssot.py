@@ -67,3 +67,28 @@ def test_format_report_groups_by_severity():
 
 def test_format_report_clean():
     assert "✅" in ssot.format_report([])
+
+
+def test_cmd_set_writes_paths_and_repo_url(tmp_path, monkeypatch):
+    home = _make_hamstern_data(tmp_path)
+    monkeypatch.setenv("HOME", str(home)); monkeypatch.setenv("USERPROFILE", str(home))
+    proj = tmp_path / "proj"; proj.mkdir()
+    monkeypatch.setattr(ssot, "project_root", lambda: str(proj))
+    monkeypatch.setattr(ssot, "repo_url", lambda: "https://github.com/o/r")
+    ssot.cmd_set([".claude/rules/*.md", "docs/PRD.md"])
+    meta = ssot.load_meta(ssot.resolve_active_project())
+    assert meta["ssot_paths"] == [".claude/rules/*.md", "docs/PRD.md"]
+    assert meta["repo_url"] == "https://github.com/o/r"
+
+
+def test_cmd_check_returns_findings(tmp_path, monkeypatch, capsys):
+    home = _make_hamstern_data(tmp_path)
+    monkeypatch.setenv("HOME", str(home)); monkeypatch.setenv("USERPROFILE", str(home))
+    proj = tmp_path / "proj"; (proj / "docs").mkdir(parents=True)
+    monkeypatch.setattr(ssot, "project_root", lambda: str(proj))
+    active = ssot.resolve_active_project()
+    meta = ssot.load_meta(active); meta["ssot_paths"] = ["missing/*.md"]
+    ssot.save_meta(active, meta)
+    monkeypatch.setattr(ssot, "discover_extractors", lambda r, b: [])
+    ssot.cmd_check()
+    assert "🔴" in capsys.readouterr().out
