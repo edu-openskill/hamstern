@@ -141,5 +141,5 @@ json.dump({
 "
 
 echo "✅ 바인딩: $NAME ($UUID)"
-echo "   /hams:record 로 결정사항 기록 / /hams:remind 로 환기."
+echo "   /hams:context-save 로 결정사항 기록 / /hams:context-resume 로 환기."
 ```

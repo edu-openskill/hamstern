@@ -204,5 +204,5 @@ git push origin main 2>&1 || echo "⚠️ push failed. local commit 만 됐어�
    UUID: $UUID
    위치: $PROJ_DIR
    이 세션은 이 프로젝트로 바인딩됨.
-   /hams:record 로 첫 결정사항 기록.
+   /hams:context-save 로 첫 결정사항 기록.
 ```

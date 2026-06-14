@@ -247,7 +247,7 @@ Next steps:  {M}건
 
 ## 이전 버전과의 호환
 
-- `/hams:record`는 deprecated. context-save가 모든 기능 + 더 풍부함.
+- 옛 `record` 스킬은 deprecated. context-save가 모든 기능 + 더 풍부함.
 - record로 저장된 sessions 파일도 context-resume이 그대로 읽음 (frontmatter mode 필드 없으면 'legacy'로 처리).
 - decisions.md 포맷은 동일 (append 호환).
 

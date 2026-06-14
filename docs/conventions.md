@@ -185,7 +185,7 @@ _마지막 업데이트: {ISO timestamp}_
 - **제거 이유:** ...
 ```
 
-`/hams:record` 가 쓰는 세션 블럭 (`## YYYY-MM-DD HH:MM · session <id>`) 과는 다른 prefix (`|` separator + 한국어 이벤트명) 로 구분된다. dashboard 의 log timeline viewer (`docs/app.js`) 는 이 두 종류만 인식한다.
+`/hams:context-save` 가 쓰는 세션 블럭 (`## YYYY-MM-DD HH:MM · session <id>`) 과는 다른 prefix (`|` separator + 한국어 이벤트명) 로 구분된다. dashboard 의 log timeline viewer (`docs/app.js`) 는 이 두 종류만 인식한다.
 
 ## 7. 진입점 단일화 (Sub-F 이후)
 
@@ -193,8 +193,8 @@ _마지막 업데이트: {ISO timestamp}_
 |--------|------|
 | `/hams:init` | 새 프로젝트 생성. UUID 부여 + `projects/{uuid}/` scaffolding + active 바인딩 + hamstern-data commit·push. |
 | `/hams:link` | 기존 프로젝트로 active 바인딩 (부분 이름 검색). `~/.config/hamstern/active-project.json` 갱신. |
-| `/hams:record` | **유일한 capture 진입점**. active 프로젝트의 `projects/{uuid}/{sessions/{id}.md, decisions.md, decisions-log.md}` 에 atomic dual-write + hamstern-data commit·push. |
-| `/hams:remind` | 읽기 전용. active 프로젝트의 `decisions.md` 전체 + 최근 N=2 sessions (8KB cap) 환기. `--deep` 으로 N=5, `--mockups` 로 mockup 메타 포함. |
+| `/hams:context-save` | **유일한 capture 진입점**. active 프로젝트의 `projects/{uuid}/{sessions/{id}.md, decisions.md, decisions-log.md}` 에 atomic dual-write + hamstern-data commit·push. |
+| `/hams:context-resume` | 읽기 전용. active 프로젝트의 `decisions.md` + 최근 세션 환기. `--last N` 으로 N개 세션, `--full` 로 상세까지. |
 | `/hams:save-mockup` | active 프로젝트의 `mockups/` 에 HTML/이미지 보존 + `mockups/_index.json` 갱신 + hamstern-data commit·push. |
 | `/hams:audit-decisions` | 읽기 + 갱신. `decisions.md` 와 `sessions/*.md` 를 재검토하고 사용자 승인 시 `decisions.md` 갱신. `remove "<text>" --data-root <...>` 으로 dashboard 핀 제거 흐름. |
 | `/hams:dashboard` (local 기본) | hamstern-data 전체 → 임시 dir 로 multi-project 번들 + background 서버 + http://localhost:<dynamic_port>/. |
@@ -204,7 +204,7 @@ write 는 record/save-mockup/init 만, 다른 스킬은 reader 또는 reader+edi
 
 ## 8. `mockups/_index.json` 포맷 + GitHub Pages URL 유도
 
-`/hams:save-mockup` 이 쓰고, `/hams:remind --mockups` 와 dashboard 가 읽는다.
+`/hams:save-mockup` 이 쓰고, `/hams:dashboard` 가 읽는다.
 
 ```json
 {

@@ -180,13 +180,12 @@ echo "   파일:   $PROJ_DIR/mockups/$FNAME"
 echo "   크기:   $SIZE bytes"
 echo "   URL:    $URL"
 echo ""
-echo "다른 디바이스나 세션에서 /hams:remind --mockups 로 확인 가능."
+echo "다른 디바이스나 세션에서 /hams:dashboard 로 확인 가능."
 ```
 
 ## 다른 진입점과의 관계
 
-- **`/hams:record`** — 세션 결정/대화는 sessions/*.md 로 보존. mockup 파일 자체는 save-mockup 이 담당.
-- **`/hams:remind --mockups`** — 저장된 mockup 메타 + URL 출력.
+- **`/hams:context-save`** — 세션 결정/대화는 sessions/*.md 로 보존. mockup 파일 자체는 save-mockup 이 담당.
 - **`/hams:dashboard`** — per-project view 에서 mockups column 노출 (Sub-F Task 11).
 
 ## 실패 시나리오

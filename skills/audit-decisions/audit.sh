@@ -20,7 +20,7 @@ if [[ ! -f "$DECISIONS_FILE" ]]; then
   echo ""
   echo "Make sure you're in a hamstern project with:"
   echo "  $PROJECT_DIR/.hamstern/decisions.md"
-  echo "  (run /hams:record in a Claude session to create it)"
+  echo "  (run /hams:context-save in a Claude session to create it)"
   exit 1
 fi
 
