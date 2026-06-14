@@ -47,13 +47,13 @@ def test_check_pointers_flags_broken_glob(tmp_path):
     assert all(f.location != "docs/PRD.md" for f in findings)
 
 
-import stat as _stat
-
 def test_run_extractors_merges_stdout(tmp_path):
-    seam = tmp_path / "ext.sh"
-    seam.write_text('#!/usr/bin/env bash\nprintf "WARN\\tfoo.md:3\\thi\\n"\n', encoding="utf-8")
-    os.chmod(seam, os.stat(seam).st_mode | _stat.S_IEXEC)
-    findings = ssot.run_extractors(str(tmp_path), ["foo.md"], [str(seam)])
+    # 머지 로직 검증은 플랫폼-독립적으로: .py 추출기 사용 (run_extractors가 sys.executable로 실행).
+    # 실제 프로젝트-로컬 seam 은 .sh 지만, 머지 로직은 추출기 언어와 무관하므로
+    # bash 가용성(특히 Windows의 WSL bash 핸들 버그)에 의존하지 않도록 .py 로 테스트한다.
+    ext = tmp_path / "ext.py"
+    ext.write_text('print("WARN\\tfoo.md:3\\thi")\n', encoding="utf-8")
+    findings = ssot.run_extractors(str(tmp_path), ["foo.md"], [str(ext)])
     assert ssot.Finding("WARN", "foo.md:3", "hi") in findings
 
 

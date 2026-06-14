@@ -73,8 +73,12 @@ def run_extractors(project_root, ssot_files, extractor_paths):
     findings = []
     for ext in extractor_paths:
         cmd = ([sys.executable, ext] if ext.endswith(".py") else ["bash", ext])
-        proc = subprocess.run(cmd + [project_root, *ssot_files],
-                              capture_output=True, text=True)
+        try:
+            proc = subprocess.run(cmd + [project_root, *ssot_files],
+                                  capture_output=True, text=True,
+                                  stdin=subprocess.DEVNULL)
+        except OSError:
+            continue  # 추출기 실행 불가(인터프리터 없음 등) — advisory라 건너뜀
         for line in proc.stdout.splitlines():
             f = parse_finding_line(line)
             if f:
