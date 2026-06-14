@@ -345,7 +345,7 @@ function renderSsotList(ssot) {
     const label = DOMPurify.sanitize(e.label);
     if (e.url) {
       const url = DOMPurify.sanitize(e.url);
-      html += `<a href="${url}" target="_blank" class="ssot-item">${icon} ${label}</a>`;
+      html += `<a href="${url}" target="_blank" rel="noopener noreferrer" class="ssot-item">${icon} ${label}</a>`;
     } else {
       html += `<div class="ssot-item ssot-nolink">${icon} ${label}</div>`;
     }
